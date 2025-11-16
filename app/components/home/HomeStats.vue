@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { parse } from 'date-fns'
 import type { Period, Range, Stat } from '~/types'
 
 const props = defineProps<{
@@ -6,57 +7,129 @@ const props = defineProps<{
   range: Range
 }>()
 
+type FinanceEntry = {
+  id: string
+  timestamp: string
+  data: any
+}
+
+type Transaction = {
+  date: Date
+  amount: number
+}
+
 function formatCurrency(value: number): string {
-  return value.toLocaleString('en-US', {
+  return value.toLocaleString('en-GB', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'GBP',
     maximumFractionDigits: 0
   })
 }
 
-const baseStats = [{
-  title: 'Customers',
-  icon: 'i-lucide-users',
-  minValue: 400,
-  maxValue: 1000,
-  minVariation: -15,
-  maxVariation: 25
-}, {
-  title: 'Conversions',
-  icon: 'i-lucide-chart-pie',
-  minValue: 1000,
-  maxValue: 2000,
-  minVariation: -10,
-  maxVariation: 20
-}, {
-  title: 'Revenue',
-  icon: 'i-lucide-circle-dollar-sign',
-  minValue: 200000,
-  maxValue: 500000,
-  minVariation: -20,
-  maxVariation: 30,
-  formatter: formatCurrency
-}, {
-  title: 'Orders',
-  icon: 'i-lucide-shopping-cart',
-  minValue: 100,
-  maxValue: 300,
-  minVariation: -5,
-  maxVariation: 15
-}]
+const parseTransactionDate = (value: string): Date | null => {
+  if (!value) {
+    return null
+  }
+
+  const parsedDdMmYyyy = parse(value, 'dd/MM/yyyy', new Date())
+  if (!Number.isNaN(parsedDdMmYyyy.getTime())) {
+    return parsedDdMmYyyy
+  }
+
+  const parsedMmDdYyyy = parse(value, 'MM/dd/yyyy', new Date())
+  if (!Number.isNaN(parsedMmDdYyyy.getTime())) {
+    return parsedMmDdYyyy
+  }
+
+  const fallback = new Date(value)
+  if (!Number.isNaN(fallback.getTime())) {
+    return fallback
+  }
+
+  return null
+}
+
+const extractTransactions = (entry: FinanceEntry | null): Transaction[] => {
+  if (!entry || !entry.data) {
+    return []
+  }
+
+  const payload = entry.data as any
+  const source = Array.isArray(payload.transactions)
+    ? payload.transactions
+    : Array.isArray(payload)
+      ? payload
+      : []
+
+  console.log('[HomeStats] raw finance payload', payload)
+  console.log('[HomeStats] transactions source', source)
+
+  return source
+    .map((item: any) => {
+      const date = parseTransactionDate(item.date)
+      const amount = typeof item.amount === 'string' ? Number.parseFloat(item.amount) : Number(item.amount)
+
+      if (!date || Number.isNaN(amount)) {
+        return null
+      }
+
+      return { date, amount }
+    })
+    .filter((item): item is Transaction => item !== null)
+}
 
 const { data: stats } = await useAsyncData<Stat[]>('stats', async () => {
-  return baseStats.map((stat) => {
-    const value = randomInt(stat.minValue, stat.maxValue)
-    const variation = randomInt(stat.minVariation, stat.maxVariation)
+  let latest: FinanceEntry | null = null
 
-    return {
-      title: stat.title,
-      icon: stat.icon,
-      value: stat.formatter ? stat.formatter(value) : value,
-      variation
-    }
+  try {
+    latest = await $fetch<FinanceEntry>('/api/finance/latest')
+  } catch (error) {
+    console.error('[HomeStats] failed to fetch /api/finance/latest', error)
+    return []
+  }
+
+  const all = extractTransactions(latest)
+
+  const transactionsInRange = all.filter((tx) => {
+    return tx.date >= props.range.start && tx.date <= props.range.end
   })
+
+  const totalTransactions = transactionsInRange.length
+
+  const totalSpent = transactionsInRange.reduce((sum, tx) => {
+    return sum + (tx.amount < 0 ? Math.abs(tx.amount) : 0)
+  }, 0)
+
+  const netAmount = transactionsInRange.reduce((sum, tx) => sum + tx.amount, 0)
+
+  const metrics: Stat[] = [
+    {
+      title: 'Total Saved Up',
+      icon: 'i-lucide-piggy-bank',
+      value: formatCurrency(netAmount),
+      variation: 0
+    },
+    {
+      title: 'Total Transactions',
+      icon: 'i-lucide-list-ordered',
+      value: totalTransactions,
+      variation: 0
+    },
+    {
+      title: 'Prediction Difference',
+      icon: 'i-lucide-sparkles',
+      value: 'Coming soon',
+      variation: 0
+    },
+    {
+      title: 'Total Spent',
+      icon: 'i-lucide-credit-card',
+      value: formatCurrency(totalSpent),
+      variation: 0
+    }
+  ]
+
+  return metrics
 }, {
   watch: [() => props.period, () => props.range],
   default: () => []

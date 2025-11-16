@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format } from 'date-fns'
+import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format, parse, startOfMonth, startOfWeek } from 'date-fns'
 import { VisXYContainer, VisLine, VisAxis, VisArea, VisCrosshair, VisTooltip } from '@unovis/vue'
 import type { Period, Range } from '~/types'
 
@@ -15,21 +15,151 @@ type DataRecord = {
   amount: number
 }
 
+type FinanceEntry = {
+  id: string
+  timestamp: string
+  data: any
+}
+
 const { width } = useElementSize(cardRef)
 
 const data = ref<DataRecord[]>([])
+const latestEntry = ref<FinanceEntry | null>(null)
 
-watch([() => props.period, () => props.range], () => {
-  const dates = ({
-    daily: eachDayOfInterval,
-    weekly: eachWeekOfInterval,
-    monthly: eachMonthOfInterval
-  } as Record<Period, typeof eachDayOfInterval>)[props.period](props.range)
+const { fetchLatest } = useFinanceData()
 
-  const min = 1000
-  const max = 10000
+const POLL_INTERVAL_MS = 10000
+let pollId: number | null = null
 
-  data.value = dates.map(date => ({ date, amount: Math.floor(Math.random() * (max - min + 1)) + min }))
+const parseTransactionDate = (value: string): Date | null => {
+  if (!value) {
+    return null
+  }
+
+  const parsedDdMmYyyy = parse(value, 'dd/MM/yyyy', new Date())
+  if (!Number.isNaN(parsedDdMmYyyy.getTime())) {
+    return parsedDdMmYyyy
+  }
+
+  const parsedMmDdYyyy = parse(value, 'MM/dd/yyyy', new Date())
+  if (!Number.isNaN(parsedMmDdYyyy.getTime())) {
+    return parsedMmDdYyyy
+  }
+
+  const fallback = new Date(value)
+  if (!Number.isNaN(fallback.getTime())) {
+    return fallback
+  }
+
+  return null
+}
+
+const extractTransactions = (entry: FinanceEntry | null): { date: Date; amount: number }[] => {
+  if (!entry || !entry.data) {
+    return []
+  }
+
+  const payload = entry.data as any
+
+  // Debug: inspect raw payload from n8n
+  console.log('[HomeChart] raw finance payload', payload)
+
+  const source = Array.isArray(payload.transactions)
+    ? payload.transactions
+    : Array.isArray(payload)
+      ? payload
+      : []
+
+  console.log('[HomeChart] transactions source', source)
+
+  return source
+    .map((item: any) => {
+      const date = parseTransactionDate(item.date)
+      const amount = typeof item.amount === 'string' ? Number.parseFloat(item.amount) : Number(item.amount)
+
+      if (!date || Number.isNaN(amount)) {
+        return null
+      }
+
+      return { date, amount }
+    })
+    .filter((item): item is { date: Date; amount: number } => item !== null)
+}
+
+const buildChartData = () => {
+  if (!latestEntry.value) {
+    data.value = []
+    return
+  }
+
+  const transactions = extractTransactions(latestEntry.value).filter(({ date }) => {
+    return date >= props.range.start && date <= props.range.end
+  })
+
+  const bucketKey = (date: Date): string => {
+    if (props.period === 'daily') {
+      return format(date, 'yyyy-MM-dd')
+    }
+
+    if (props.period === 'weekly') {
+      return format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd')
+    }
+
+    return format(startOfMonth(date), 'yyyy-MM')
+  }
+
+  const buckets = new Map<string, number>()
+
+  for (const tx of transactions) {
+    const key = bucketKey(tx.date)
+    const previous = buckets.get(key) ?? 0
+    const spent = tx.amount < 0 ? Math.abs(tx.amount) : 0
+
+    buckets.set(key, previous + spent)
+  }
+
+  const dates =
+    props.period === 'daily'
+      ? eachDayOfInterval(props.range)
+      : props.period === 'weekly'
+        ? eachWeekOfInterval(props.range, { weekStartsOn: 1 })
+        : eachMonthOfInterval(props.range)
+
+  data.value = dates.map(date => ({
+    date,
+    amount: buckets.get(bucketKey(date)) ?? 0
+  }))
+}
+
+const loadLatest = async () => {
+  const { data: latest, error } = await fetchLatest()
+
+  console.log('[HomeChart] /api/finance/latest response', { latest, error })
+
+  if (!error && latest) {
+    latestEntry.value = latest as FinanceEntry
+  }
+}
+
+onMounted(async () => {
+  await loadLatest()
+
+  // Poll so that when n8n posts new data to /api/finance/webhook,
+  // the chart picks up the latest entry without a manual reload.
+  pollId = window.setInterval(() => {
+    loadLatest()
+  }, POLL_INTERVAL_MS)
+})
+
+onUnmounted(() => {
+  if (pollId !== null) {
+    clearInterval(pollId)
+    pollId = null
+  }
+})
+
+watch([() => props.period, () => props.range, latestEntry], () => {
+  buildChartData()
 }, { immediate: true })
 
 const x = (_: DataRecord, i: number) => i
@@ -37,7 +167,7 @@ const y = (d: DataRecord) => d.amount
 
 const total = computed(() => data.value.reduce((acc: number, { amount }) => acc + amount, 0))
 
-const formatNumber = new Intl.NumberFormat('en', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format
+const formatNumber = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format
 
 const formatDate = (date: Date): string => {
   return ({

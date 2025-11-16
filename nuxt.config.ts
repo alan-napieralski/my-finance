@@ -7,6 +7,9 @@ export default defineNuxtConfig({
   ],
   devtools: { enabled: true },
   css: ['~/assets/css/main.css'],
+  runtimeConfig: {
+    apiKey: process.env.NUXT_API_KEY || ''
+  },
   ui: {
     theme: {
       // add new colours here
