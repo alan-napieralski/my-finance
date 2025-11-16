@@ -1,0 +1,25 @@
+/**
+ * Semantic Colors
+ * 
+ * primary (green)   - Main CTAs, active nav, brand elements, important links
+ * secondary (blue)  - Secondary buttons, alternative actions, complementary UI
+ * success (green)   - Success messages, completed states, positive confirmations
+ * info (blue)       - Info alerts, tooltips, help text, neutral notifications
+ * warning (yellow)  - Warning messages, pending states, attention-needed items
+ * error (red)       - Error messages, validation errors, destructive actions
+ * neutral (slate)   - Text, borders, backgrounds, disabled states
+ */
+@theme static {
+  /* Define new custom color */
+  --color-brand-50: #fef2f2;
+  --color-brand-100: #fee2e2;
+  --color-brand-200: #fecaca;
+  --color-brand-300: #fca5a5;
+  --color-brand-400: #f87171;
+  --color-brand-500: #ef4444;
+  --color-brand-600: #dc2626;
+  --color-brand-700: #b91c1c;
+  --color-brand-800: #991b1b;
+  --color-brand-900: #7f1d1d;
+  --color-brand-950: #450a0a;
+}

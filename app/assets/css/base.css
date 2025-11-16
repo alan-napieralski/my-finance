@@ -1,0 +1,130 @@
+html {
+  @apply scroll-smooth;
+}
+
+/* not needed because of NuxtUI */
+.u-container {
+  max-width: var(--grid-max-width);
+  padding-inline: var(--grid-gutter);
+  margin-inline: auto;
+}
+
+.u-grid {
+  display: grid;
+  gap: var(--grid-gutter);
+}
+
+@theme {
+  /* Fonts */
+  --font-sans: 'Public Sans', sans-serif;
+
+  /* Breakpoints */
+  --breakpoint-xs: 375px;
+  --breakpoint-sm: 480px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1280px;
+  --breakpoint-xl: 1920px;
+  --breakpoint-2xl: 2560px;
+  --breakpoint-3xl: 1920px;
+  --breakpoint-4xl: 2560px;
+
+  /* Font Size */
+  --text-2xs: 0.8125rem;  /* 13px */
+  --text-xs: 0.875rem;    /* 14px */
+  --text-sm: 0.9375rem;   /* 15px */
+  --text-base: 1rem;      /* 16px */
+  --text-lg: 1.125rem;    /* 18px */
+  --text-xl: 1.25rem;     /* 20px */
+  --text-2xl: 1.375rem;   /* 22px */
+  --text-3xl: 1.5625rem;  /* 25px */
+  --text-4xl: 1.75rem;    /* 28px */
+  --text-5xl: 1.875rem;   /* 30px */
+  --text-6xl: 2.1875rem;  /* 35px */
+  --text-7xl: 2.5rem;     /* 40px */
+  --text-8xl: 3.125rem;   /* 50px */
+  --text-9xl: 3.75rem;    /* 60px */
+  --text-10xl: 4.375rem;  /* 70px */
+  --text-11xl: 5.625rem;  /* 90px */
+
+
+  /* Spacing */
+
+  /**
+   * Gutters are the x-padding space applied to the '.container' element
+   * to give space between the viewport edge and content
+   */
+  --spacing-gutter: 1.25rem;      /* 20px */
+  --spacing-gutter-md: 2.5rem;    /* 40px */
+  --spacing-gutter-2xl: 3.125rem; /* 50px */
+  --spacing-gutter-3xl: 3.75rem;  /* 60px */
+  --spacing-gutter-4xl: 6.25rem;  /* 100px */
+
+  /**
+   * Separators are the y space applied between major elements
+   * of the page. E.g. the space between slices
+   */
+  --spacing-separator-sm: 1.5rem;    /* 50px */
+  --spacing-separator: 3.125rem;    /* 50px */
+  --spacing-separator-md: 5rem;     /* 80px */
+  --spacing-separator-2xl: 6.25rem; /* 100px */
+  --spacing-separator-3xl: 7.5rem;  /* 120px */
+  --spacing-separator-4xl: 9.375rem; /* 150px */
+
+
+  /* Colour Themes */
+  /* --color-* */
+
+  --color-black: #000000;
+  --color-white: #FFFFFF;
+
+  /* Copy */
+  --color-grey-200: #d7d7d7;
+  --color-grey-300: #bdbdbd;
+  --color-grey-500: #767676;
+  --color-grey-700: #505050;
+  --color-grey-800: #444444;
+  --color-grey-900: #171717;
+
+  /* Focus */
+  --color-focus-50: #E8FAFE;
+  --color-focus-500: #17ACCC;
+
+  /* Error */
+  --color-error-100: #F9EBE7;
+  --color-error-600: #D73D0C;
+  --color-error-700: #C7380B;
+
+  /* Success */
+  --color-success-100: #E6F2E8;
+  --color-success-700: #077E1A;
+
+  /* Warning */
+  --color-warning-100: #F8F4E6;
+  --color-warning-700: #BD9506;
+
+  /* Socials */
+  --color-facebook: #365397;
+  --color-x: #000000;
+  --color-linkedin: #006DB3;
+  --color-google: #4285F4;
+  --color-youtube: #FF3333;
+  --color-vimeo: #48B6ED;
+  --color-pinterest: #CE1A19;
+  --color-instagram: #396D9A;
+
+  /* Data Visualisation colours */
+  --color-data-purple-600: #8F47EB;
+  --color-data-purple-800: #6022A7;
+  --color-data-blue-600: #067ACC;
+  --color-data-blue-800: #094F83;
+  --color-data-green-600: #0A891F;
+  --color-data-green-800: #0E591C;
+  --color-data-orange-600: #AF640C;
+  --color-data-orange-800: #7F3E14;
+  --color-data-red-600: #D91424;
+  --color-data-red-800: #A4101C;
+  --color-data-turquoise-600: #0A8484;
+  --color-data-turquoise-800: #105051;
+  --color-data-yellow-600: #8C7500;
+  --color-data-yellow-800: #685204;
+}

@@ -1,0 +1,8 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+@import "./base.css";
+@import "./colors.css";
+
+@import "./utopia.css";
+
+@import "./typography.css";

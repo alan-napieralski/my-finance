@@ -1,0 +1,51 @@
+@theme {
+  --font-sans: 'Public Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+
+@layer base {
+  h1,
+  .h1,
+  h2,
+  .h2,
+  h3,
+  .h3,
+  h4,
+  .h4,
+  h5,
+  .h5,
+  h6,
+  .h6 {
+    @apply font-medium;
+  }
+
+  h1,
+  .h1 {
+    @apply text-fl-5xl mb-fl-xl leading-tight;
+  }
+
+  h2,
+  .h2 {
+    @apply text-fl-3xl mb-fl-sm leading-tight;
+  }
+
+  h3,
+  .h3 {
+    @apply text-fl-2xl mb-fl-sm leading-tight;
+  }
+
+  h4,
+  .h4 {
+    @apply text-fl-xl mb-fl-sm leading-tight;
+  }
+
+  h5,
+  .h5 {
+    @apply text-fl-lg mb-fl-sm leading-tight;
+  }
+
+  h6,
+  .h6 {
+    @apply text-fl-base leading-tight;
+  }
+}

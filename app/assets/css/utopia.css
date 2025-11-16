@@ -1,0 +1,95 @@
+:root {
+  /* type */
+
+  /* @link https://utopia.fyi/type/calculator?c=320,16,1.125,2560,21,1.2,7,2,&s=0.75|0.5|0.25,1.5|2|3|4|5|6,s-l&g=s,l,xl,12 */
+  --step--2: clamp(0.7901rem, 0.7728rem + 0.0867vw, 0.9115rem);
+  --step--1: clamp(0.8889rem, 0.8596rem + 0.1463vw, 1.0938rem);
+  --step-0: clamp(1rem, 0.9554rem + 0.2232vw, 1.3125rem);
+  --step-1: clamp(1.125rem, 1.0607rem + 0.3214vw, 1.575rem);
+  --step-2: clamp(1.2656rem, 1.1764rem + 0.446vw, 1.89rem);
+  --step-3: clamp(1.4238rem, 1.3032rem + 0.603vw, 2.268rem);
+  --step-4: clamp(1.6018rem, 1.4418rem + 0.7999vw, 2.7216rem);
+  --step-5: clamp(1.802rem, 1.5929rem + 1.0456vw, 3.2659rem);
+  --step-6: clamp(2.0273rem, 1.757rem + 1.3513vw, 3.9191rem);
+  --step-7: clamp(2.2807rem, 1.9347rem + 1.7302vw, 4.7029rem);
+
+  /* spacing */
+
+  /* @link https://utopia.fyi/space/calculator?c=320,16,1.125,2560,21,1.25,7,2,&s=0.75|0.5|0.25,1.5|2|3|4|5|6,s-l&g=s,l,xl,12 */
+  --space-3xs: clamp(0.25rem, 0.2411rem + 0.0446vw, 0.3125rem);
+  --space-2xs: clamp(0.5rem, 0.4732rem + 0.1339vw, 0.6875rem);
+  --space-xs: clamp(0.75rem, 0.7143rem + 0.1786vw, 1rem);
+  --space-sm: clamp(1rem, 0.9554rem + 0.2232vw, 1.3125rem);
+  --space-md: clamp(1.5rem, 1.4286rem + 0.3571vw, 2rem);
+  --space-lg: clamp(2rem, 1.9107rem + 0.4464vw, 2.625rem);
+  --space-xl: clamp(3rem, 2.8661rem + 0.6696vw, 3.9375rem);
+  --space-2xl: clamp(4rem, 3.8214rem + 0.8929vw, 5.25rem);
+  --space-3xl: clamp(5rem, 4.7768rem + 1.1161vw, 6.5625rem);
+  --space-4xl: clamp(6rem, 5.7321rem + 1.3393vw, 7.875rem);
+
+  /* one-up pairs */
+  --space-3xs-2xs: clamp(0.25rem, 0.1875rem + 0.3125vw, 0.6875rem);
+  --space-2xs-xs: clamp(0.5rem, 0.4286rem + 0.3571vw, 1rem);
+  --space-xs-sm: clamp(0.75rem, 0.6696rem + 0.4018vw, 1.3125rem);
+  --space-sm-md: clamp(1rem, 0.8571rem + 0.7143vw, 2rem);
+  --space-md-lg: clamp(1.5rem, 1.3393rem + 0.8036vw, 2.625rem);
+  --space-lg-xl: clamp(2rem, 1.7232rem + 1.3839vw, 3.9375rem);
+  --space-xl-2xl: clamp(3rem, 2.6786rem + 1.6071vw, 5.25rem);
+  --space-2xl-3xl: clamp(4rem, 3.6339rem + 1.8304vw, 6.5625rem);
+  --space-3xl-4xl: clamp(5rem, 4.5893rem + 2.0536vw, 7.875rem);
+
+  /* custom pairs */
+  --space-sm-lg: clamp(1rem, 0.7679rem + 1.1607vw, 2.625rem);
+
+
+  /* @link https://utopia.fyi/grid/calculator?c=320,16,1.2,2560,21,1.25,6,2,&s=0.75|0.5|0.25,1.5|2|3|4|6,s-l&g=s,l,xl,12 */
+  --grid-max-width: 81.38rem;
+  --grid-gutter: var(--space-sm-lg, clamp(1rem, 0.4705rem + 2.6477vw, 2.625rem));
+  --grid-columns: 12;
+}
+
+/* Must be static since we're using dynamic values.  */
+/* @theme static makes the styles inside applied on build regardless of usage */
+@theme static {
+
+  /* Fluid Font Sizes using step scale */
+  --text-fl-2xs: var(--step--2);
+  --text-fl-xs: var(--step--1);
+  --text-fl-sm: var(--step-0);
+  --text-fl-base: var(--step-0);
+  --text-fl-md: var(--step-1);
+  --text-fl-lg: var(--step-2);
+  --text-fl-xl: var(--step-3);
+  --text-fl-2xl: var(--step-4);
+  --text-fl-3xl: var(--step-5);
+  --text-fl-4xl: var(--step-6);
+  --text-fl-5xl: var(--step-7);
+
+  /* Fluid Spacing */
+  --spacing-fl-3xs: var(--space-3xs);
+  --spacing-fl-2xs: var(--space-2xs);
+  --spacing-fl-xs: var(--space-xs);
+  --spacing-fl-sm: var(--space-sm);
+  --spacing-fl-base: var(--space-sm);
+  --spacing-fl-md: var(--space-md);
+  --spacing-fl-lg: var(--space-lg);
+  --spacing-fl-xl: var(--space-xl);
+  --spacing-fl-2xl: var(--space-2xl);
+  --spacing-fl-3xl: var(--space-3xl);
+  --spacing-fl-4xl: var(--space-4xl);
+
+  /* One-up pairs for spacing */
+  --spacing-fl-3xs-2xs: var(--space-3xs-2xs);
+  --spacing-fl-2xs-xs: var(--space-2xs-xs);
+  --spacing-fl-xs-sm: var(--space-xs-sm);
+  --spacing-fl-sm-md: var(--space-sm-md);
+  --spacing-fl-md-lg: var(--space-md-lg);
+  --spacing-fl-lg-xl: var(--space-lg-xl);
+  --spacing-fl-xl-2xl: var(--space-xl-2xl);
+  --spacing-fl-2xl-3xl: var(--space-2xl-3xl);
+  --spacing-fl-3xl-4xl: var(--space-3xl-4xl);
+
+  /* Custom pairs */
+  --spacing-fl-sm-lg: var(--space-sm-lg);
+}
+
