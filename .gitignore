@@ -23,9 +23,10 @@ logs
 .env.*
 !.env.example
 
-# AI agent configuration files
 WARP.md
 CLAUDE.md
 .github/copilot-instructions.md
 .cursorrules
 .cursor/
+# VSC
+.history
