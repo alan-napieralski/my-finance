@@ -35,5 +35,10 @@ export default defineNuxtConfig({
         braceStyle: '1tbs'
       }
     }
+  },
+  vite: {
+    server: {
+      allowedHosts: ['host.docker.internal']
+    }
   }
 })
