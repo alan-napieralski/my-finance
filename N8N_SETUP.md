@@ -36,10 +36,8 @@ In your n8n workflow (after the Telegram trigger):
 2. **URL**: `http://your-domain:3000/api/finance/webhook`
    - For local development: `http://localhost:3000/api/finance/webhook`
    - For production: `https://yourdomain.com/api/finance/webhook`
-3. **Authentication**: None (we'll use headers)
-4. **Headers**:
-   - Name: `Authorization`
-   - Value: `Bearer your-secure-random-api-key`
+3. **Authentication**: None ⚠️ **Auth currently disabled for local testing**
+4. **Headers**: None required (authentication temporarily disabled)
 5. **Body Content Type**: JSON
 6. **Body**: Send your finance data as JSON
 
@@ -82,9 +80,10 @@ const { data: limitedData } = await useFetch('/api/finance?limit=10')
 
 ### POST `/api/finance/webhook`
 Receives finance data from n8n
-- **Auth**: Bearer token in Authorization header
+- **Auth**: ⚠️ **Currently disabled for local testing** (no Authorization header required)
 - **Body**: JSON object with your finance data
-- **Response**: `{ success: true, id: string, timestamp: string }`
+- **Success Response**: `{ success: true, id: string, timestamp: string }`
+- **Note**: Re-enable authentication in `server/api/finance/webhook.post.ts` before deploying to production
 
 ### GET `/api/finance/latest`
 Returns the most recent finance data entry
@@ -136,14 +135,22 @@ Test the webhook locally with curl:
 
 ```bash
 curl -X POST http://localhost:3000/api/finance/webhook \
-  -H "Authorization: Bearer your-api-key" \
   -H "Content-Type: application/json" \
   -d '{
     "type": "test",
     "amount": 1000,
-    "date": "2025-11-16"
+    "date": "2025-11-16",
+    "transactions": [
+      {
+        "date": "16/11/2025",
+        "description": "Test transaction",
+        "amount": -50.00
+      }
+    ]
   }'
 ```
+
+**Note**: ⚠️ Authentication is currently disabled for local testing. No Authorization header is required. Remember to re-enable authentication in the webhook handler before production deployment.
 
 Then fetch it:
 ```bash
