@@ -42,9 +42,6 @@ const extractTransactions = (entry: FinanceEntry | null): Transaction[] => {
       ? payload
       : []
 
-  console.log('[CategoriesChart] raw finance payload', payload)
-  console.log('[CategoriesChart] transactions source', source)
-
   return source
     .map((item: unknown) => {
       const record = item as Record<string, unknown>
@@ -87,8 +84,6 @@ const buildChartData = () => {
 
 const loadLatest = async () => {
   const { data: latest, error } = await fetchLatest()
-
-  console.log('[CategoriesChart] /api/finance/latest response', { latest, error })
 
   if (!error && latest) {
     latestEntry.value = latest as FinanceEntry
