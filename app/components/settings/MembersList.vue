@@ -1,19 +1,9 @@
 <script setup lang="ts">
-import type { DropdownMenuItem } from '@nuxt/ui'
 import type { Member } from '~/types'
 
 defineProps<{
   members: Member[]
 }>()
-
-const items = [{
-  label: 'Edit member',
-  onSelect: () => {}
-}, {
-  label: 'Remove member',
-  color: 'error' as const,
-  onSelect: () => {}
-}] satisfies DropdownMenuItem[]
 </script>
 
 <template>
@@ -46,14 +36,6 @@ const items = [{
           color="neutral"
           :ui="{ value: 'capitalize', item: 'capitalize' }"
         />
-
-        <UDropdownMenu :items="items" :content="{ align: 'end' }">
-          <UButton
-            icon="i-lucide-ellipsis-vertical"
-            color="neutral"
-            variant="ghost"
-          />
-        </UDropdownMenu>
       </div>
     </li>
   </ul>
