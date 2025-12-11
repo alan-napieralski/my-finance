@@ -132,6 +132,7 @@ const { data: stats } = await useAsyncData<Stat[]>('stats', async () => {
         </span>
 
         <UBadge
+          v-if="stat.variation !== 0"
           :color="stat.variation > 0 ? 'success' : 'error'"
           variant="subtle"
           class="text-xs"
