@@ -41,7 +41,7 @@ export const usePlansStore = defineStore('plans', () => {
     const index = wants.value.findIndex(want => want.id === id)
     if (index === -1) return
 
-    Object.assign(wants.value[index], patch)
+    Object.assign(wants.value[index]!, patch)
   }
 
   function removeWant(id: string) {
@@ -62,7 +62,7 @@ export const usePlansStore = defineStore('plans', () => {
     const index = debts.value.findIndex(debt => debt.id === id)
     if (index === -1) return
 
-    Object.assign(debts.value[index], patch)
+    Object.assign(debts.value[index]!, patch)
   }
 
   function removeDebt(id: string) {
