@@ -3,7 +3,7 @@ import { financeStore } from '../../utils/financeStore'
 export default eventHandler(async (event) => {
   // TEMPORARILY DISABLED FOR TESTING
   // TODO: Re-enable auth after testing
-  
+
   // Get API key from environment
   // const apiKey = useRuntimeConfig().apiKey
 
@@ -34,11 +34,11 @@ export default eventHandler(async (event) => {
   // Home* components currently expect either:
   // - payload.transactions: Transaction[]
   // - or payload: Transaction[] directly
-  let normalizedPayload: any = body
+  let normalizedPayload: unknown = body
 
   // Case 1: n8n sends `{ "body": [ ...transactions ] }`
-  if (!Array.isArray(body) && Array.isArray((body as any).body) && !(body as any).transactions) {
-    const { body: innerBody, ...rest } = body as any
+  if (!Array.isArray(body) && typeof body === 'object' && 'body' in body && Array.isArray(body.body) && !('transactions' in body)) {
+    const { body: innerBody, ...rest } = body as Record<string, unknown>
     normalizedPayload = {
       ...rest,
       transactions: innerBody

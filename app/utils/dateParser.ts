@@ -2,13 +2,13 @@ import { parse } from 'date-fns'
 
 /**
  * Parses a transaction date string with disambiguation to prevent misinterpretation.
- * 
+ *
  * For slash-separated numeric dates (e.g., "01/02/2024"):
  * - If both first and second tokens are <=12, the date is ambiguous and returns null
  * - If day > 12, assumes dd/MM/yyyy format
  * - If month > 12, assumes MM/dd/yyyy format
  * - Falls back to ISO date parsing for unambiguous cases
- * 
+ *
  * @param value - The date string to parse
  * @returns Parsed Date object or null if parsing fails or date is ambiguous
  */

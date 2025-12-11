@@ -19,7 +19,7 @@ type DataRecord = {
 type FinanceEntry = {
   id: string
   timestamp: string
-  data: any
+  data: Record<string, unknown>
 }
 
 const { width } = useElementSize(cardRef)
@@ -32,12 +32,12 @@ const { fetchLatest } = useFinanceData()
 const POLL_INTERVAL_MS = 10000
 let pollId: number | null = null
 
-const extractTransactions = (entry: FinanceEntry | null): { date: Date; amount: number }[] => {
+const extractTransactions = (entry: FinanceEntry | null): { date: Date, amount: number }[] => {
   if (!entry || !entry.data) {
     return []
   }
 
-  const payload = entry.data as any
+  const payload = entry.data
 
   // Debug: inspect raw payload from n8n
 
@@ -48,7 +48,7 @@ const extractTransactions = (entry: FinanceEntry | null): { date: Date; amount: 
       : []
 
   return source
-    .map((item: any) => {
+    .map((item: unknown) => {
       const date = parseTransactionDate(item.date)
       const amount = typeof item.amount === 'string' ? Number.parseFloat(item.amount) : Number(item.amount)
 
@@ -58,7 +58,7 @@ const extractTransactions = (entry: FinanceEntry | null): { date: Date; amount: 
 
       return { date, amount }
     })
-    .filter((item): item is { date: Date; amount: number } => item !== null)
+    .filter((item): item is { date: Date, amount: number } => item !== null)
 }
 
 const buildChartData = () => {
@@ -93,8 +93,8 @@ const buildChartData = () => {
     buckets.set(key, previous + spent)
   }
 
-  const dates =
-    props.period === 'daily'
+  const dates
+    = props.period === 'daily'
       ? eachDayOfInterval(props.range)
       : props.period === 'weekly'
         ? eachWeekOfInterval(props.range, { weekStartsOn: 1 })

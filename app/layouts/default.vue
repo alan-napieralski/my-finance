@@ -116,7 +116,6 @@ onMounted(async () => {
       class="bg-elevated/25"
       :ui="{ footer: 'lg:border-t lg:border-default' }"
     >
-
       <template #default="{ collapsed }">
         <UDashboardSearchButton :collapsed="collapsed" class="bg-transparent ring-default" />
 
@@ -136,7 +135,6 @@ onMounted(async () => {
           class="mt-auto"
         />
       </template>
-
     </UDashboardSidebar>
 
     <UDashboardSearch :groups="groups" />

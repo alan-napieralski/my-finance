@@ -7,9 +7,6 @@ export default defineNuxtConfig({
   ],
   devtools: { enabled: true },
   css: ['~/assets/css/main.css'],
-  runtimeConfig: {
-    apiKey: process.env.NUXT_API_KEY || ''
-  },
   ui: {
     theme: {
       // add new colours here
@@ -23,22 +20,25 @@ export default defineNuxtConfig({
       ]
     }
   },
+  runtimeConfig: {
+    apiKey: process.env.NUXT_API_KEY || ''
+  },
 
   routeRules: {
     '/': { prerender: true }
   },
   compatibilityDate: '2025-01-15',
+  vite: {
+    server: {
+      allowedHosts: ['host.docker.internal']
+    }
+  },
   eslint: {
     config: {
       stylistic: {
         commaDangle: 'never',
         braceStyle: '1tbs'
       }
-    }
-  },
-  vite: {
-    server: {
-      allowedHosts: ['host.docker.internal']
     }
   }
 })

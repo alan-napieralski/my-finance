@@ -4,13 +4,13 @@
 export interface FinanceData {
   id: string
   timestamp: string
-  data: Record<string, any>
+  data: Record<string, unknown>
 }
 
 let financeData: FinanceData[] = []
 
 export const financeStore = {
-  add(data: Record<string, any>) {
+  add(data: Record<string, unknown>) {
     const entry: FinanceData = {
       id: crypto.randomUUID(),
       timestamp: new Date().toISOString(),

@@ -10,7 +10,7 @@ const props = defineProps<{
 type FinanceEntry = {
   id: string
   timestamp: string
-  data: any
+  data: Record<string, unknown>
 }
 
 type Transaction = {
@@ -31,7 +31,7 @@ const extractTransactions = (entry: FinanceEntry | null): Transaction[] => {
     return []
   }
 
-  const payload = entry.data as any
+  const payload = entry.data
   const source = Array.isArray(payload.transactions)
     ? payload.transactions
     : Array.isArray(payload)
@@ -39,7 +39,7 @@ const extractTransactions = (entry: FinanceEntry | null): Transaction[] => {
       : []
 
   return source
-    .map((item: any) => {
+    .map((item: unknown) => {
       const date = parseTransactionDate(item.date)
       const amount = typeof item.amount === 'string' ? Number.parseFloat(item.amount) : Number(item.amount)
 
