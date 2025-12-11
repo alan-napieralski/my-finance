@@ -61,9 +61,6 @@ const extractTransactions = (entry: FinanceEntry | null): Transaction[] => {
       ? payload
       : []
 
-  console.log('[HomeStats] raw finance payload', payload)
-  console.log('[HomeStats] transactions source', source)
-
   return source
     .map((item: any) => {
       const date = parseTransactionDate(item.date)

@@ -22,7 +22,6 @@ export default eventHandler(async (event) => {
   const body = await readBody(event)
 
   // Debug: log raw payload from n8n when data is received
-  console.log('[finance/webhook] received payload from n8n', body)
 
   if (!body || (typeof body !== 'object' && !Array.isArray(body))) {
     throw createError({
@@ -50,8 +49,6 @@ export default eventHandler(async (event) => {
   if (Array.isArray(body)) {
     normalizedPayload = body
   }
-
-  console.log('[finance/webhook] normalized finance payload', normalizedPayload)
 
   // Store the finance data
   const entry = financeStore.add(normalizedPayload)

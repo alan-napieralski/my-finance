@@ -59,9 +59,6 @@ const extractTransactions = (entry: FinanceEntry | null): TransactionRow[] => {
       ? payload
       : []
 
-  console.log('[HomeSales] raw finance payload', payload)
-  console.log('[HomeSales] transactions source', source)
-
   return source
     .map((item: any, index: number) => {
       const date = parseTransactionDate(item.date)

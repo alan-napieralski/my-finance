@@ -29,7 +29,6 @@ async function onSubmit(event: FormSubmitEvent<ProfileSchema>) {
     icon: 'i-lucide-check',
     color: 'success'
   })
-  console.log(event.data)
 }
 
 function onFileChange(e: Event) {

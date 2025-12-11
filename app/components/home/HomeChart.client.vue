@@ -62,15 +62,12 @@ const extractTransactions = (entry: FinanceEntry | null): { date: Date; amount: 
   const payload = entry.data as any
 
   // Debug: inspect raw payload from n8n
-  console.log('[HomeChart] raw finance payload', payload)
 
   const source = Array.isArray(payload.transactions)
     ? payload.transactions
     : Array.isArray(payload)
       ? payload
       : []
-
-  console.log('[HomeChart] transactions source', source)
 
   return source
     .map((item: any) => {
@@ -133,8 +130,6 @@ const buildChartData = () => {
 
 const loadLatest = async () => {
   const { data: latest, error } = await fetchLatest()
-
-  console.log('[HomeChart] /api/finance/latest response', { latest, error })
 
   if (!error && latest) {
     latestEntry.value = latest as FinanceEntry
