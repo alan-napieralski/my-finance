@@ -13,18 +13,29 @@ export const useFinanceData = () => {
 
   // Auto-refreshing latest data (for real-time updates)
   const useLatestData = (refreshInterval = 10000) => {
-    return useFetch('/api/finance/latest', {
+    const result = useFetch('/api/finance/latest', {
       watch: false,
-      server: false,
-      ...refreshInterval > 0 && {
-        onResponse() {
-          // Auto-refresh every X milliseconds
-          setTimeout(() => {
-            refresh()
-          }, refreshInterval)
-        }
-      }
+      server: false
     })
+
+    if (refreshInterval > 0) {
+      let intervalId: NodeJS.Timeout | null = null
+
+      onMounted(() => {
+        intervalId = setInterval(() => {
+          result.refresh()
+        }, refreshInterval)
+      })
+
+      onUnmounted(() => {
+        if (intervalId !== null) {
+          clearInterval(intervalId)
+          intervalId = null
+        }
+      })
+    }
+
+    return result
   }
 
   return {
