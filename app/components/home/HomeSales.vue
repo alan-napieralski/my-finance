@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { h } from 'vue'
-import { parse } from 'date-fns'
 import type { TableColumn } from '@nuxt/ui'
 import type { Period, Range } from '~/types'
+import { parseTransactionDate } from '~/utils/dateParser'
 
 const props = defineProps<{
   period: Period
@@ -12,7 +12,7 @@ const props = defineProps<{
 type FinanceEntry = {
   id: string
   timestamp: string
-  data: any
+  data: Record<string, unknown>
 }
 
 type TransactionRow = {
@@ -24,62 +24,42 @@ type TransactionRow = {
   balance?: number
 }
 
-const parseTransactionDate = (value: string): Date | null => {
-  if (!value) {
-    return null
-  }
-
-  const parsedDdMmYyyy = parse(value, 'dd/MM/yyyy', new Date())
-  if (!Number.isNaN(parsedDdMmYyyy.getTime())) {
-    return parsedDdMmYyyy
-  }
-
-  const parsedMmDdYyyy = parse(value, 'MM/dd/yyyy', new Date())
-  if (!Number.isNaN(parsedMmDdYyyy.getTime())) {
-    return parsedMmDdYyyy
-  }
-
-  const fallback = new Date(value)
-  if (!Number.isNaN(fallback.getTime())) {
-    return fallback
-  }
-
-  return null
-}
-
 const extractTransactions = (entry: FinanceEntry | null): TransactionRow[] => {
   if (!entry || !entry.data) {
     return []
   }
 
-  const payload = entry.data as any
+  const payload = entry.data
   const source = Array.isArray(payload.transactions)
     ? payload.transactions
     : Array.isArray(payload)
       ? payload
       : []
 
-  console.log('[HomeSales] raw finance payload', payload)
-  console.log('[HomeSales] transactions source', source)
-
   return source
-    .map((item: any, index: number) => {
-      const date = parseTransactionDate(item.date)
-      const amount = typeof item.amount === 'string' ? Number.parseFloat(item.amount) : Number(item.amount)
-      const balance = item.balance != null ? Number(item.balance) : undefined
+    .map((item: unknown, index: number) => {
+      const record = item as Record<string, unknown>
+      const date = parseTransactionDate(record.date as string)
+      const amount = typeof record.amount === 'string' ? Number.parseFloat(record.amount) : Number(record.amount)
+      const balance = record.balance != null ? Number(record.balance) : undefined
 
       if (!date || Number.isNaN(amount)) {
         return null
       }
 
-      return {
-        id: String(item.id ?? index),
+      const result: TransactionRow = {
+        id: String(record.id ?? index),
         date: date.toISOString(),
-        description: item.description ?? '',
-        category: item.category ?? undefined,
+        description: (record.description as string) ?? '',
         amount,
         balance
       }
+
+      if (record.category != null) {
+        result.category = record.category as string
+      }
+
+      return result
     })
     .filter((item): item is TransactionRow => item !== null)
 }

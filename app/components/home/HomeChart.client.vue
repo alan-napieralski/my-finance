@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format, parse, startOfMonth, startOfWeek } from 'date-fns'
+import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format, startOfMonth, startOfWeek } from 'date-fns'
 import { VisXYContainer, VisLine, VisAxis, VisArea, VisCrosshair, VisTooltip } from '@unovis/vue'
 import type { Period, Range } from '~/types'
+import { parseTransactionDate } from '~/utils/dateParser'
 
 const cardRef = useTemplateRef<HTMLElement | null>('cardRef')
 
@@ -18,7 +19,7 @@ type DataRecord = {
 type FinanceEntry = {
   id: string
   timestamp: string
-  data: any
+  data: Record<string, unknown>
 }
 
 const { width } = useElementSize(cardRef)
@@ -31,38 +32,14 @@ const { fetchLatest } = useFinanceData()
 const POLL_INTERVAL_MS = 10000
 let pollId: number | null = null
 
-const parseTransactionDate = (value: string): Date | null => {
-  if (!value) {
-    return null
-  }
-
-  const parsedDdMmYyyy = parse(value, 'dd/MM/yyyy', new Date())
-  if (!Number.isNaN(parsedDdMmYyyy.getTime())) {
-    return parsedDdMmYyyy
-  }
-
-  const parsedMmDdYyyy = parse(value, 'MM/dd/yyyy', new Date())
-  if (!Number.isNaN(parsedMmDdYyyy.getTime())) {
-    return parsedMmDdYyyy
-  }
-
-  const fallback = new Date(value)
-  if (!Number.isNaN(fallback.getTime())) {
-    return fallback
-  }
-
-  return null
-}
-
-const extractTransactions = (entry: FinanceEntry | null): { date: Date; amount: number }[] => {
+const extractTransactions = (entry: FinanceEntry | null): { date: Date, amount: number }[] => {
   if (!entry || !entry.data) {
     return []
   }
 
-  const payload = entry.data as any
+  const payload = entry.data
 
   // Debug: inspect raw payload from n8n
-  console.log('[HomeChart] raw finance payload', payload)
 
   const source = Array.isArray(payload.transactions)
     ? payload.transactions
@@ -70,12 +47,11 @@ const extractTransactions = (entry: FinanceEntry | null): { date: Date; amount: 
       ? payload
       : []
 
-  console.log('[HomeChart] transactions source', source)
-
   return source
-    .map((item: any) => {
-      const date = parseTransactionDate(item.date)
-      const amount = typeof item.amount === 'string' ? Number.parseFloat(item.amount) : Number(item.amount)
+    .map((item: unknown) => {
+      const record = item as Record<string, unknown>
+      const date = parseTransactionDate(record.date as string)
+      const amount = typeof record.amount === 'string' ? Number.parseFloat(record.amount) : Number(record.amount)
 
       if (!date || Number.isNaN(amount)) {
         return null
@@ -83,7 +59,7 @@ const extractTransactions = (entry: FinanceEntry | null): { date: Date; amount: 
 
       return { date, amount }
     })
-    .filter((item): item is { date: Date; amount: number } => item !== null)
+    .filter((item): item is { date: Date, amount: number } => item !== null)
 }
 
 const buildChartData = () => {
@@ -118,8 +94,8 @@ const buildChartData = () => {
     buckets.set(key, previous + spent)
   }
 
-  const dates =
-    props.period === 'daily'
+  const dates
+    = props.period === 'daily'
       ? eachDayOfInterval(props.range)
       : props.period === 'weekly'
         ? eachWeekOfInterval(props.range, { weekStartsOn: 1 })
@@ -133,8 +109,6 @@ const buildChartData = () => {
 
 const loadLatest = async () => {
   const { data: latest, error } = await fetchLatest()
-
-  console.log('[HomeChart] /api/finance/latest response', { latest, error })
 
   if (!error && latest) {
     latestEntry.value = latest as FinanceEntry
@@ -193,7 +167,7 @@ const template = (d: DataRecord) => `${formatDate(d.date)}: ${formatNumber(d.amo
     <template #header>
       <div>
         <p class="text-xs text-muted uppercase mb-1.5">
-          Revenue
+          Spending
         </p>
         <p class="text-3xl text-highlighted font-semibold">
           {{ formatNumber(total) }}

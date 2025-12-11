@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { parse } from 'date-fns'
 import type { Period, Range, Stat } from '~/types'
+import { parseTransactionDate } from '~/utils/dateParser'
 
 const props = defineProps<{
   period: Period
@@ -10,7 +10,7 @@ const props = defineProps<{
 type FinanceEntry = {
   id: string
   timestamp: string
-  data: any
+  data: Record<string, unknown>
 }
 
 type Transaction = {
@@ -26,48 +26,23 @@ function formatCurrency(value: number): string {
   })
 }
 
-const parseTransactionDate = (value: string): Date | null => {
-  if (!value) {
-    return null
-  }
-
-  const parsedDdMmYyyy = parse(value, 'dd/MM/yyyy', new Date())
-  if (!Number.isNaN(parsedDdMmYyyy.getTime())) {
-    return parsedDdMmYyyy
-  }
-
-  const parsedMmDdYyyy = parse(value, 'MM/dd/yyyy', new Date())
-  if (!Number.isNaN(parsedMmDdYyyy.getTime())) {
-    return parsedMmDdYyyy
-  }
-
-  const fallback = new Date(value)
-  if (!Number.isNaN(fallback.getTime())) {
-    return fallback
-  }
-
-  return null
-}
-
 const extractTransactions = (entry: FinanceEntry | null): Transaction[] => {
   if (!entry || !entry.data) {
     return []
   }
 
-  const payload = entry.data as any
+  const payload = entry.data
   const source = Array.isArray(payload.transactions)
     ? payload.transactions
     : Array.isArray(payload)
       ? payload
       : []
 
-  console.log('[HomeStats] raw finance payload', payload)
-  console.log('[HomeStats] transactions source', source)
-
   return source
-    .map((item: any) => {
-      const date = parseTransactionDate(item.date)
-      const amount = typeof item.amount === 'string' ? Number.parseFloat(item.amount) : Number(item.amount)
+    .map((item: unknown) => {
+      const record = item as Record<string, unknown>
+      const date = parseTransactionDate(record.date as string)
+      const amount = typeof record.amount === 'string' ? Number.parseFloat(record.amount) : Number(record.amount)
 
       if (!date || Number.isNaN(amount)) {
         return null
@@ -158,6 +133,7 @@ const { data: stats } = await useAsyncData<Stat[]>('stats', async () => {
         </span>
 
         <UBadge
+          v-if="stat.variation !== 0"
           :color="stat.variation > 0 ? 'success' : 'error'"
           variant="subtle"
           class="text-xs"

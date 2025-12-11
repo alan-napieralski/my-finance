@@ -1,30 +1,49 @@
 export const useFinanceData = () => {
   // Fetch latest finance data
   const fetchLatest = async () => {
-    const { data, error } = await useFetch('/api/finance/latest')
-    return { data: data.value, error: error.value }
+    try {
+      const data = await $fetch('/api/finance/latest')
+      return { data, error: null }
+    } catch (err) {
+      return { data: null, error: err }
+    }
   }
 
   // Fetch all finance data with optional limit
   const fetchAll = async (limit = 50) => {
-    const { data, error } = await useFetch(`/api/finance?limit=${limit}`)
-    return { data: data.value, error: error.value }
+    try {
+      const data = await $fetch(`/api/finance`, { query: { limit } })
+      return { data, error: null }
+    } catch (err) {
+      return { data: null, error: err }
+    }
   }
 
   // Auto-refreshing latest data (for real-time updates)
   const useLatestData = (refreshInterval = 10000) => {
-    return useFetch('/api/finance/latest', {
+    const result = useFetch('/api/finance/latest', {
       watch: false,
-      server: false,
-      ...refreshInterval > 0 && {
-        onResponse() {
-          // Auto-refresh every X milliseconds
-          setTimeout(() => {
-            refresh()
-          }, refreshInterval)
-        }
-      }
+      server: false
     })
+
+    if (refreshInterval > 0) {
+      let intervalId: ReturnType<typeof setInterval> | null = null
+
+      onMounted(() => {
+        intervalId = setInterval(() => {
+          result.refresh()
+        }, refreshInterval)
+      })
+
+      onUnmounted(() => {
+        if (intervalId !== null) {
+          clearInterval(intervalId)
+          intervalId = null
+        }
+      })
+    }
+
+    return result
   }
 
   return {
