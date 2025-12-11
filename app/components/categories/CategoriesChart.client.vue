@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { parse } from 'date-fns'
 import { VisSingleContainer, VisDonut, VisTooltip } from '@unovis/vue'
 import type { Period, Range } from '~/types'
+import { parseTransactionDate } from '~/utils/dateParser'
 
 const props = defineProps<{
   period: Period
@@ -29,29 +29,6 @@ const data = ref<CategoryDatum[]>([])
 const latestEntry = ref<FinanceEntry | null>(null)
 
 const { fetchLatest } = useFinanceData()
-
-const parseTransactionDate = (value: string): Date | null => {
-  if (!value) {
-    return null
-  }
-
-  const parsedDdMmYyyy = parse(value, 'dd/MM/yyyy', new Date())
-  if (!Number.isNaN(parsedDdMmYyyy.getTime())) {
-    return parsedDdMmYyyy
-  }
-
-  const parsedMmDdYyyy = parse(value, 'MM/dd/yyyy', new Date())
-  if (!Number.isNaN(parsedMmDdYyyy.getTime())) {
-    return parsedMmDdYyyy
-  }
-
-  const fallback = new Date(value)
-  if (!Number.isNaN(fallback.getTime())) {
-    return fallback
-  }
-
-  return null
-}
 
 const extractTransactions = (entry: FinanceEntry | null): Transaction[] => {
   if (!entry || !entry.data) {
