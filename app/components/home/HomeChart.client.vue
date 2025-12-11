@@ -49,8 +49,9 @@ const extractTransactions = (entry: FinanceEntry | null): { date: Date, amount: 
 
   return source
     .map((item: unknown) => {
-      const date = parseTransactionDate(item.date)
-      const amount = typeof item.amount === 'string' ? Number.parseFloat(item.amount) : Number(item.amount)
+      const record = item as Record<string, unknown>
+      const date = parseTransactionDate(record.date as string)
+      const amount = typeof record.amount === 'string' ? Number.parseFloat(record.amount) : Number(record.amount)
 
       if (!date || Number.isNaN(amount)) {
         return null

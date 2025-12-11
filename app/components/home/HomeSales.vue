@@ -38,22 +38,28 @@ const extractTransactions = (entry: FinanceEntry | null): TransactionRow[] => {
 
   return source
     .map((item: unknown, index: number) => {
-      const date = parseTransactionDate(item.date)
-      const amount = typeof item.amount === 'string' ? Number.parseFloat(item.amount) : Number(item.amount)
-      const balance = item.balance != null ? Number(item.balance) : undefined
+      const record = item as Record<string, unknown>
+      const date = parseTransactionDate(record.date as string)
+      const amount = typeof record.amount === 'string' ? Number.parseFloat(record.amount) : Number(record.amount)
+      const balance = record.balance != null ? Number(record.balance) : undefined
 
       if (!date || Number.isNaN(amount)) {
         return null
       }
 
-      return {
-        id: String(item.id ?? index),
+      const result: TransactionRow = {
+        id: String(record.id ?? index),
         date: date.toISOString(),
-        description: item.description ?? '',
-        category: item.category ?? undefined,
+        description: (record.description as string) ?? '',
         amount,
         balance
       }
+
+      if (record.category != null) {
+        result.category = record.category as string
+      }
+
+      return result
     })
     .filter((item): item is TransactionRow => item !== null)
 }

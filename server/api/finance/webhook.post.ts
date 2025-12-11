@@ -51,7 +51,7 @@ export default eventHandler(async (event) => {
   }
 
   // Store the finance data
-  const entry = financeStore.add(normalizedPayload)
+  const entry = financeStore.add(normalizedPayload as Record<string, unknown>)
 
   return {
     success: true,
