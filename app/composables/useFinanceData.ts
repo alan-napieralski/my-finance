@@ -1,14 +1,22 @@
 export const useFinanceData = () => {
   // Fetch latest finance data
   const fetchLatest = async () => {
-    const { data, error } = await useFetch('/api/finance/latest')
-    return { data: data.value, error: error.value }
+    try {
+      const data = await $fetch('/api/finance/latest')
+      return { data, error: null }
+    } catch (err) {
+      return { data: null, error: err }
+    }
   }
 
   // Fetch all finance data with optional limit
   const fetchAll = async (limit = 50) => {
-    const { data, error } = await useFetch(`/api/finance?limit=${limit}`)
-    return { data: data.value, error: error.value }
+    try {
+      const data = await $fetch(`/api/finance`, { query: { limit } })
+      return { data, error: null }
+    } catch (err) {
+      return { data: null, error: err }
+    }
   }
 
   // Auto-refreshing latest data (for real-time updates)
