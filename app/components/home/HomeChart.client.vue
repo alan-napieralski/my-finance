@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format, parse, startOfMonth, startOfWeek } from 'date-fns'
+import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format, startOfMonth, startOfWeek } from 'date-fns'
 import { VisXYContainer, VisLine, VisAxis, VisArea, VisCrosshair, VisTooltip } from '@unovis/vue'
 import type { Period, Range } from '~/types'
+import { parseTransactionDate } from '~/utils/dateParser'
 
 const cardRef = useTemplateRef<HTMLElement | null>('cardRef')
 
@@ -30,29 +31,6 @@ const { fetchLatest } = useFinanceData()
 
 const POLL_INTERVAL_MS = 10000
 let pollId: number | null = null
-
-const parseTransactionDate = (value: string): Date | null => {
-  if (!value) {
-    return null
-  }
-
-  const parsedDdMmYyyy = parse(value, 'dd/MM/yyyy', new Date())
-  if (!Number.isNaN(parsedDdMmYyyy.getTime())) {
-    return parsedDdMmYyyy
-  }
-
-  const parsedMmDdYyyy = parse(value, 'MM/dd/yyyy', new Date())
-  if (!Number.isNaN(parsedMmDdYyyy.getTime())) {
-    return parsedMmDdYyyy
-  }
-
-  const fallback = new Date(value)
-  if (!Number.isNaN(fallback.getTime())) {
-    return fallback
-  }
-
-  return null
-}
 
 const extractTransactions = (entry: FinanceEntry | null): { date: Date; amount: number }[] => {
   if (!entry || !entry.data) {

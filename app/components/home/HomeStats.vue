@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { parse } from 'date-fns'
 import type { Period, Range, Stat } from '~/types'
+import { parseTransactionDate } from '~/utils/dateParser'
 
 const props = defineProps<{
   period: Period
@@ -24,29 +24,6 @@ function formatCurrency(value: number): string {
     currency: 'GBP',
     maximumFractionDigits: 0
   })
-}
-
-const parseTransactionDate = (value: string): Date | null => {
-  if (!value) {
-    return null
-  }
-
-  const parsedDdMmYyyy = parse(value, 'dd/MM/yyyy', new Date())
-  if (!Number.isNaN(parsedDdMmYyyy.getTime())) {
-    return parsedDdMmYyyy
-  }
-
-  const parsedMmDdYyyy = parse(value, 'MM/dd/yyyy', new Date())
-  if (!Number.isNaN(parsedMmDdYyyy.getTime())) {
-    return parsedMmDdYyyy
-  }
-
-  const fallback = new Date(value)
-  if (!Number.isNaN(fallback.getTime())) {
-    return fallback
-  }
-
-  return null
 }
 
 const extractTransactions = (entry: FinanceEntry | null): Transaction[] => {

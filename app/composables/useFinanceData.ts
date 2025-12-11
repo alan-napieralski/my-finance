@@ -19,7 +19,7 @@ export const useFinanceData = () => {
     })
 
     if (refreshInterval > 0) {
-      let intervalId: NodeJS.Timeout | null = null
+      let intervalId: ReturnType<typeof setInterval> | null = null
 
       onMounted(() => {
         intervalId = setInterval(() => {

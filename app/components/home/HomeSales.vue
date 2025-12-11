@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { h } from 'vue'
-import { parse } from 'date-fns'
 import type { TableColumn } from '@nuxt/ui'
 import type { Period, Range } from '~/types'
+import { parseTransactionDate } from '~/utils/dateParser'
 
 const props = defineProps<{
   period: Period
@@ -22,29 +22,6 @@ type TransactionRow = {
   category?: string
   amount: number
   balance?: number
-}
-
-const parseTransactionDate = (value: string): Date | null => {
-  if (!value) {
-    return null
-  }
-
-  const parsedDdMmYyyy = parse(value, 'dd/MM/yyyy', new Date())
-  if (!Number.isNaN(parsedDdMmYyyy.getTime())) {
-    return parsedDdMmYyyy
-  }
-
-  const parsedMmDdYyyy = parse(value, 'MM/dd/yyyy', new Date())
-  if (!Number.isNaN(parsedMmDdYyyy.getTime())) {
-    return parsedMmDdYyyy
-  }
-
-  const fallback = new Date(value)
-  if (!Number.isNaN(fallback.getTime())) {
-    return fallback
-  }
-
-  return null
 }
 
 const extractTransactions = (entry: FinanceEntry | null): TransactionRow[] => {
