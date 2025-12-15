@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 import { defineStore } from 'pinia'
 import { useStorage } from '@vueuse/core'
-import type { GeneralSavings, WantPlan, DebtPlan } from '~/types'
+import type { GeneralSavings, WantPlan, DebtPlan, RecurringPayment } from '~/types'
 
 export const usePlansStore = defineStore('plans', () => {
   const savings = useStorage<GeneralSavings>('plans:savings-general', {
@@ -10,6 +10,7 @@ export const usePlansStore = defineStore('plans', () => {
 
   const wants = useStorage<WantPlan[]>('plans:wants', [])
   const debts = useStorage<DebtPlan[]>('plans:debts', [])
+  const recurringPayments = useStorage<RecurringPayment[]>('plans:recurring', [])
 
   const totalSavingsPerMonth = computed(() => savings.value.monthlyAmount ?? 0)
 
@@ -21,8 +22,12 @@ export const usePlansStore = defineStore('plans', () => {
     return debts.value.reduce((sum, debt) => sum + (debt.monthlyPayment || 0), 0)
   })
 
+  const totalRecurringPaymentsPerMonth = computed(() => {
+    return recurringPayments.value.reduce((sum, payment) => sum + (payment.monthlyAmount || 0), 0)
+  })
+
   const totalPlannedOutflowPerMonth = computed(() => {
-    return totalSavingsPerMonth.value + totalWantsPerMonth.value + totalDebtPaymentsPerMonth.value
+    return totalSavingsPerMonth.value + totalWantsPerMonth.value + totalDebtPaymentsPerMonth.value + totalRecurringPaymentsPerMonth.value
   })
 
   function setGeneralSavings(amount: number) {
@@ -69,13 +74,35 @@ export const usePlansStore = defineStore('plans', () => {
     debts.value = debts.value.filter(debt => debt.id !== id)
   }
 
+  function addRecurringPayment() {
+    recurringPayments.value.push({
+      id: crypto.randomUUID(),
+      name: '',
+      monthlyAmount: 0,
+      category: 'Bills'
+    })
+  }
+
+  function updateRecurringPayment(id: string, patch: Partial<RecurringPayment>) {
+    const index = recurringPayments.value.findIndex(payment => payment.id === id)
+    if (index === -1) return
+
+    Object.assign(recurringPayments.value[index]!, patch)
+  }
+
+  function removeRecurringPayment(id: string) {
+    recurringPayments.value = recurringPayments.value.filter(payment => payment.id !== id)
+  }
+
   return {
     savings,
     wants,
     debts,
+    recurringPayments,
     totalSavingsPerMonth,
     totalWantsPerMonth,
     totalDebtPaymentsPerMonth,
+    totalRecurringPaymentsPerMonth,
     totalPlannedOutflowPerMonth,
     setGeneralSavings,
     addWant,
@@ -83,6 +110,9 @@ export const usePlansStore = defineStore('plans', () => {
     removeWant,
     addDebt,
     updateDebt,
-    removeDebt
+    removeDebt,
+    addRecurringPayment,
+    updateRecurringPayment,
+    removeRecurringPayment
   }
 })

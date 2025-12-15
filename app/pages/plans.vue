@@ -17,9 +17,15 @@ const items: TabsItem[] = [{
 }, {
   label: 'Debts',
   value: 'debts'
+}, {
+  label: 'Recurring',
+  value: 'recurring'
+}, {
+  label: 'Monthly',
+  value: 'monthly'
 }]
 
-const current = ref<'savings' | 'wants' | 'debts'>('savings')
+const current = ref<'savings' | 'wants' | 'debts' | 'recurring' | 'monthly'>('savings')
 
 const formatCurrency = (value: number) => {
   return value.toLocaleString('en-GB', {
@@ -214,6 +220,10 @@ const formatCurrency = (value: number) => {
           </div>
         </UPageCard>
       </div>
+
+      <PlansRecurringPayments v-else-if="current === 'recurring'" />
+
+      <PlansMonthlyBudget v-else-if="current === 'monthly'" />
 
       <div v-else class="flex flex-col gap-4 sm:gap-6 lg:max-w-3xl">
         <UPageCard

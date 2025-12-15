@@ -81,3 +81,32 @@ export interface DebtPlan {
   interestRate?: number
   notes?: string
 }
+
+export interface RecurringPayment {
+  id: string
+  name: string
+  monthlyAmount: number
+  category?: string
+  notes?: string
+}
+
+export interface IncomeLine {
+  id: string
+  name: string
+  amount: number
+}
+
+export interface BudgetItem {
+  id: string
+  name: string
+  category: string
+  plannedAmount: number
+  notes?: string
+}
+
+export interface BudgetMonth {
+  monthId: string // YYYY-MM
+  income: IncomeLine[]
+  plannedSavingsOverride?: number
+  items: BudgetItem[]
+}
