@@ -58,3 +58,26 @@ export interface Range {
   start: Date
   end: Date
 }
+
+export interface GeneralSavings {
+  monthlyAmount: number
+}
+
+export interface WantPlan {
+  id: string
+  name: string
+  monthlyAmount: number
+  targetAmount?: number
+  targetDate?: string
+  notes?: string
+}
+
+export interface DebtPlan {
+  id: string
+  name: string
+  totalDebt: number
+  deadline: string
+  monthlyPayment: number
+  interestRate?: number
+  notes?: string
+}
