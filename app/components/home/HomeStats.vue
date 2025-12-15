@@ -1,62 +1,110 @@
 <script setup lang="ts">
 import type { Period, Range, Stat } from '~/types'
+import { parseTransactionDate } from '~/utils/dateParser'
 
 const props = defineProps<{
   period: Period
   range: Range
 }>()
 
+type FinanceEntry = {
+  id: string
+  timestamp: string
+  data: Record<string, unknown>
+}
+
+type Transaction = {
+  date: Date
+  amount: number
+}
+
 function formatCurrency(value: number): string {
-  return value.toLocaleString('en-US', {
+  return value.toLocaleString('en-GB', {
     style: 'currency',
-    currency: 'USD',
+    currency: 'GBP',
     maximumFractionDigits: 0
   })
 }
 
-const baseStats = [{
-  title: 'Customers',
-  icon: 'i-lucide-users',
-  minValue: 400,
-  maxValue: 1000,
-  minVariation: -15,
-  maxVariation: 25
-}, {
-  title: 'Conversions',
-  icon: 'i-lucide-chart-pie',
-  minValue: 1000,
-  maxValue: 2000,
-  minVariation: -10,
-  maxVariation: 20
-}, {
-  title: 'Revenue',
-  icon: 'i-lucide-circle-dollar-sign',
-  minValue: 200000,
-  maxValue: 500000,
-  minVariation: -20,
-  maxVariation: 30,
-  formatter: formatCurrency
-}, {
-  title: 'Orders',
-  icon: 'i-lucide-shopping-cart',
-  minValue: 100,
-  maxValue: 300,
-  minVariation: -5,
-  maxVariation: 15
-}]
+const extractTransactions = (entry: FinanceEntry | null): Transaction[] => {
+  if (!entry || !entry.data) {
+    return []
+  }
+
+  const payload = entry.data
+  const source = Array.isArray(payload.transactions)
+    ? payload.transactions
+    : Array.isArray(payload)
+      ? payload
+      : []
+
+  return source
+    .map((item: unknown) => {
+      const record = item as Record<string, unknown>
+      const date = parseTransactionDate(record.date as string)
+      const amount = typeof record.amount === 'string' ? Number.parseFloat(record.amount) : Number(record.amount)
+
+      if (!date || Number.isNaN(amount)) {
+        return null
+      }
+
+      return { date, amount }
+    })
+    .filter((item): item is Transaction => item !== null)
+}
 
 const { data: stats } = await useAsyncData<Stat[]>('stats', async () => {
-  return baseStats.map((stat) => {
-    const value = randomInt(stat.minValue, stat.maxValue)
-    const variation = randomInt(stat.minVariation, stat.maxVariation)
+  let latest: FinanceEntry | null = null
 
-    return {
-      title: stat.title,
-      icon: stat.icon,
-      value: stat.formatter ? stat.formatter(value) : value,
-      variation
-    }
+  try {
+    latest = await $fetch<FinanceEntry>('/api/finance/latest')
+  } catch (error) {
+    console.error('[HomeStats] failed to fetch /api/finance/latest', error)
+    return []
+  }
+
+  const all = extractTransactions(latest)
+
+  const transactionsInRange = all.filter((tx) => {
+    return tx.date >= props.range.start && tx.date <= props.range.end
   })
+
+  const totalTransactions = transactionsInRange.length
+
+  const totalSpent = transactionsInRange.reduce((sum, tx) => {
+    return sum + (tx.amount < 0 ? Math.abs(tx.amount) : 0)
+  }, 0)
+
+  const netAmount = transactionsInRange.reduce((sum, tx) => sum + tx.amount, 0)
+
+  const metrics: Stat[] = [
+    {
+      title: 'Total Saved Up',
+      icon: 'i-lucide-piggy-bank',
+      value: formatCurrency(netAmount),
+      variation: 0
+    },
+    {
+      title: 'Total Transactions',
+      icon: 'i-lucide-list-ordered',
+      value: totalTransactions,
+      variation: 0
+    },
+    {
+      title: 'Prediction Difference',
+      icon: 'i-lucide-sparkles',
+      value: 'Coming soon',
+      variation: 0
+    },
+    {
+      title: 'Total Spent',
+      icon: 'i-lucide-credit-card',
+      value: formatCurrency(totalSpent),
+      variation: 0
+    }
+  ]
+
+  return metrics
 }, {
   watch: [() => props.period, () => props.range],
   default: () => []
@@ -85,6 +133,7 @@ const { data: stats } = await useAsyncData<Stat[]>('stats', async () => {
         </span>
 
         <UBadge
+          v-if="stat.variation !== 0"
           :color="stat.variation > 0 ? 'success' : 'error'"
           variant="subtle"
           class="text-xs"

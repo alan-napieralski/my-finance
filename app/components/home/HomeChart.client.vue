@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format } from 'date-fns'
+import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format, startOfMonth, startOfWeek } from 'date-fns'
 import { VisXYContainer, VisLine, VisAxis, VisArea, VisCrosshair, VisTooltip } from '@unovis/vue'
 import type { Period, Range } from '~/types'
+import { parseTransactionDate } from '~/utils/dateParser'
 
 const cardRef = useTemplateRef<HTMLElement | null>('cardRef')
 
@@ -15,21 +16,124 @@ type DataRecord = {
   amount: number
 }
 
+type FinanceEntry = {
+  id: string
+  timestamp: string
+  data: Record<string, unknown>
+}
+
 const { width } = useElementSize(cardRef)
 
 const data = ref<DataRecord[]>([])
+const latestEntry = ref<FinanceEntry | null>(null)
 
-watch([() => props.period, () => props.range], () => {
-  const dates = ({
-    daily: eachDayOfInterval,
-    weekly: eachWeekOfInterval,
-    monthly: eachMonthOfInterval
-  } as Record<Period, typeof eachDayOfInterval>)[props.period](props.range)
+const { fetchLatest } = useFinanceData()
 
-  const min = 1000
-  const max = 10000
+const POLL_INTERVAL_MS = 10000
+let pollId: number | null = null
 
-  data.value = dates.map(date => ({ date, amount: Math.floor(Math.random() * (max - min + 1)) + min }))
+const extractTransactions = (entry: FinanceEntry | null): { date: Date, amount: number }[] => {
+  if (!entry || !entry.data) {
+    return []
+  }
+
+  const payload = entry.data
+
+  // Debug: inspect raw payload from n8n
+
+  const source = Array.isArray(payload.transactions)
+    ? payload.transactions
+    : Array.isArray(payload)
+      ? payload
+      : []
+
+  return source
+    .map((item: unknown) => {
+      const record = item as Record<string, unknown>
+      const date = parseTransactionDate(record.date as string)
+      const amount = typeof record.amount === 'string' ? Number.parseFloat(record.amount) : Number(record.amount)
+
+      if (!date || Number.isNaN(amount)) {
+        return null
+      }
+
+      return { date, amount }
+    })
+    .filter((item): item is { date: Date, amount: number } => item !== null)
+}
+
+const buildChartData = () => {
+  if (!latestEntry.value) {
+    data.value = []
+    return
+  }
+
+  const transactions = extractTransactions(latestEntry.value).filter(({ date }) => {
+    return date >= props.range.start && date <= props.range.end
+  })
+
+  const bucketKey = (date: Date): string => {
+    if (props.period === 'daily') {
+      return format(date, 'yyyy-MM-dd')
+    }
+
+    if (props.period === 'weekly') {
+      return format(startOfWeek(date, { weekStartsOn: 1 }), 'yyyy-MM-dd')
+    }
+
+    return format(startOfMonth(date), 'yyyy-MM')
+  }
+
+  const buckets = new Map<string, number>()
+
+  for (const tx of transactions) {
+    const key = bucketKey(tx.date)
+    const previous = buckets.get(key) ?? 0
+    const spent = tx.amount < 0 ? Math.abs(tx.amount) : 0
+
+    buckets.set(key, previous + spent)
+  }
+
+  const dates
+    = props.period === 'daily'
+      ? eachDayOfInterval(props.range)
+      : props.period === 'weekly'
+        ? eachWeekOfInterval(props.range, { weekStartsOn: 1 })
+        : eachMonthOfInterval(props.range)
+
+  data.value = dates.map(date => ({
+    date,
+    amount: buckets.get(bucketKey(date)) ?? 0
+  }))
+}
+
+const loadLatest = async () => {
+  const { data: latest, error } = await fetchLatest()
+
+  if (!error && latest) {
+    latestEntry.value = latest as FinanceEntry
+  }
+}
+
+onMounted(async () => {
+  await loadLatest()
+
+  // Poll so that when n8n posts new data to /api/finance/webhook,
+  // the chart picks up the latest entry without a manual reload.
+  pollId = window.setInterval(() => {
+    loadLatest()
+  }, POLL_INTERVAL_MS)
+})
+
+onUnmounted(() => {
+  if (pollId !== null) {
+    clearInterval(pollId)
+    pollId = null
+  }
+})
+
+watch([() => props.period, () => props.range, latestEntry], () => {
+  buildChartData()
 }, { immediate: true })
 
 const x = (_: DataRecord, i: number) => i
@@ -37,7 +141,7 @@ const y = (d: DataRecord) => d.amount
 
 const total = computed(() => data.value.reduce((acc: number, { amount }) => acc + amount, 0))
 
-const formatNumber = new Intl.NumberFormat('en', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format
+const formatNumber = new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', maximumFractionDigits: 0 }).format
 
 const formatDate = (date: Date): string => {
   return ({
@@ -63,7 +167,7 @@ const template = (d: DataRecord) => `${formatDate(d.date)}: ${formatNumber(d.amo
     <template #header>
       <div>
         <p class="text-xs text-muted uppercase mb-1.5">
-          Revenue
+          Spending
         </p>
         <p class="text-3xl text-highlighted font-semibold">
           {{ formatNumber(total) }}

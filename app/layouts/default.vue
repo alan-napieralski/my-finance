@@ -14,6 +14,13 @@ const links = [[{
     open.value = false
   }
 }, {
+  label: 'Categories',
+  icon: 'i-lucide-pie-chart',
+  to: '/categories',
+  onSelect: () => {
+    open.value = false
+  }
+}, {
   label: 'Settings',
   to: '/settings',
   icon: 'i-lucide-settings',
@@ -109,7 +116,6 @@ onMounted(async () => {
       class="bg-elevated/25"
       :ui="{ footer: 'lg:border-t lg:border-default' }"
     >
-
       <template #default="{ collapsed }">
         <UDashboardSearchButton :collapsed="collapsed" class="bg-transparent ring-default" />
 
@@ -129,7 +135,6 @@ onMounted(async () => {
           class="mt-auto"
         />
       </template>
-
     </UDashboardSidebar>
 
     <UDashboardSearch :groups="groups" />

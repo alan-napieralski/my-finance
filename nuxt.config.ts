@@ -20,11 +20,19 @@ export default defineNuxtConfig({
       ]
     }
   },
+  runtimeConfig: {
+    apiKey: ''
+  },
 
   routeRules: {
     '/': { prerender: true }
   },
   compatibilityDate: '2025-01-15',
+  vite: {
+    server: {
+      allowedHosts: ['host.docker.internal']
+    }
+  },
   eslint: {
     config: {
       stylistic: {

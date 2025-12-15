@@ -22,4 +22,21 @@
   --color-brand-800: #991b1b;
   --color-brand-900: #7f1d1d;
   --color-brand-950: #450a0a;
+
+  /* Category-specific colors (finance) */
+  --color-category-transfers: #0ea5e9;    /* sky-500 */
+  --color-category-wants: #ec4899;        /* pink-500 */
+  --color-category-needs: #22c55e;        /* green-500 */
+  --color-category-bills: #6366f1;        /* indigo-500 */
+  --color-category-subscriptions: #a855f7;/* purple-500 */
+  --color-category-savings: #f59e0b;      /* amber-500 */
+  --color-category-income: #10b981;       /* emerald-500 */
+  --color-category-other: #94a3b8;        /* slate-400 */
+
+  /* Detailed spending categories */
+  --color-category-groceries: #22c55e;          /* green-500 */
+  --color-category-transport: #0ea5e9;         /* sky-500 */
+  --color-category-eating-out: #f97316;        /* orange-500 */
+  --color-category-sport-and-hobbies: #6366f1; /* indigo-500 */
+  --color-category-nightout: #ec4899;          /* pink-500 */
 }
