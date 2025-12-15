@@ -22,12 +22,17 @@ type Transaction = {
 type CategorySummary = {
   category: string
   planned: number
+  carryIn: number
+  available: number
   actual: number
   variance: number
+  carryOut: number
 }
 
 const plansStore = usePlansStore()
 const budgetStore = useBudgetStore()
+
+const { rolloverEnabled, rolloverNegativeEnabled } = storeToRefs(budgetStore)
 
 const {
   savings,
@@ -67,6 +72,10 @@ function formatCurrency(value: number): string {
 }
 
 const month = computed(() => budgetStore.getMonth(selectedMonthId.value))
+
+const chronologicalMonthIds = computed(() => {
+  return [...monthIds.value].reverse()
+})
 
 const plannedIncomeTotal = computed(() => {
   return month.value.income.reduce((sum, line) => sum + (line.amount || 0), 0)
@@ -141,15 +150,18 @@ const { data: latestEntry } = await useAsyncData<FinanceEntry | null>('finance-l
   default: () => null
 })
 
-const monthRange = computed(() => {
-  const start = startOfMonth(new Date(`${selectedMonthId.value}-01T00:00:00`))
+const getMonthRange = (monthId: string) => {
+  const start = startOfMonth(new Date(`${monthId}-01T00:00:00`))
   const end = endOfMonth(start)
   return { start, end }
-})
+}
+
+const monthRange = computed(() => getMonthRange(selectedMonthId.value))
+
+const allTransactions = computed(() => extractTransactions(latestEntry.value))
 
 const monthTransactions = computed(() => {
-  const all = extractTransactions(latestEntry.value)
-  return all.filter((tx) => {
+  return allTransactions.value.filter((tx) => {
     return tx.date >= monthRange.value.start && tx.date <= monthRange.value.end
   })
 })
@@ -192,7 +204,7 @@ const actualByCategory = computed(() => {
     .sort((a, b) => b.value - a.value)
 })
 
-const plannedByCategory = computed(() => {
+const plannedByCategoryBase = computed(() => {
   const buckets = new Map<string, number>()
 
   for (const item of month.value.items) {
@@ -216,6 +228,90 @@ const plannedByCategory = computed(() => {
   return buckets
 })
 
+const buildPlannedBaseByCategoryForMonth = (monthId: string) => {
+  const buckets = new Map<string, number>()
+  const month = budgetStore.getMonth(monthId)
+
+  for (const item of month.items) {
+    const planned = item.plannedAmount || 0
+    if (!planned) continue
+
+    const key = resolveCategoryKey(item.category)
+    const previous = buckets.get(key) ?? 0
+    buckets.set(key, previous + planned)
+  }
+
+  for (const payment of recurringPayments.value) {
+    const planned = payment.monthlyAmount || 0
+    if (!planned) continue
+
+    const key = resolveCategoryKey(payment.category ?? 'Recurring')
+    const previous = buckets.get(key) ?? 0
+    buckets.set(key, previous + planned)
+  }
+
+  return buckets
+}
+
+const buildActualByCategoryForMonth = (monthId: string) => {
+  const { start, end } = getMonthRange(monthId)
+  const buckets = new Map<string, number>()
+
+  for (const tx of allTransactions.value) {
+    if (tx.date < start || tx.date > end) continue
+
+    const spent = tx.amount < 0 ? Math.abs(tx.amount) : 0
+    if (!spent) continue
+
+    const key = resolveCategoryKey(tx.category)
+    const previous = buckets.get(key) ?? 0
+    buckets.set(key, previous + spent)
+  }
+
+  return buckets
+}
+
+const carryInByMonthId = computed(() => {
+  const result = new Map<string, Map<string, number>>()
+
+  if (!rolloverEnabled.value) {
+    return result
+  }
+
+  const allowNegative = rolloverNegativeEnabled.value
+
+  let previousCarryOut = new Map<string, number>()
+
+  for (const monthId of chronologicalMonthIds.value) {
+    result.set(monthId, new Map(previousCarryOut))
+
+    const plannedBase = buildPlannedBaseByCategoryForMonth(monthId)
+    const actual = buildActualByCategoryForMonth(monthId)
+
+    const keys = new Set<string>()
+    for (const key of plannedBase.keys()) keys.add(key)
+    for (const key of actual.keys()) keys.add(key)
+    for (const key of previousCarryOut.keys()) keys.add(key)
+
+    const carryOut = new Map<string, number>()
+
+    for (const key of keys) {
+      const available = (plannedBase.get(key) ?? 0) + (previousCarryOut.get(key) ?? 0)
+      const spent = actual.get(key) ?? 0
+      const variance = available - spent
+      const out = allowNegative ? variance : (variance > 0 ? variance : 0)
+
+      if (out !== 0) {
+        carryOut.set(key, out)
+      }
+    }
+
+    previousCarryOut = carryOut
+  }
+
+  return result
+})
+
 const actualByCategoryMap = computed(() => {
   const buckets = new Map<string, number>()
 
@@ -231,26 +327,64 @@ const actualByCategoryMap = computed(() => {
   return buckets
 })
 
+const carryInForSelectedMonth = computed(() => {
+  return carryInByMonthId.value.get(selectedMonthId.value) ?? new Map<string, number>()
+})
+
 const budgetVsActual = computed<CategorySummary[]>(() => {
   const keys = new Set<string>()
 
-  for (const key of plannedByCategory.value.keys()) keys.add(key)
+  for (const key of plannedByCategoryBase.value.keys()) keys.add(key)
   for (const key of actualByCategoryMap.value.keys()) keys.add(key)
+  for (const key of carryInForSelectedMonth.value.keys()) keys.add(key)
+
+  const allowNegative = rolloverNegativeEnabled.value
 
   return Array.from(keys)
     .map((key) => {
-      const planned = plannedByCategory.value.get(key) ?? 0
+      const planned = plannedByCategoryBase.value.get(key) ?? 0
+      const carryIn = rolloverEnabled.value ? (carryInForSelectedMonth.value.get(key) ?? 0) : 0
+      const available = planned + carryIn
       const actual = actualByCategoryMap.value.get(key) ?? 0
-      const variance = planned - actual
+      const variance = available - actual
+      const carryOut = rolloverEnabled.value
+        ? (allowNegative ? variance : (variance > 0 ? variance : 0))
+        : 0
 
       return {
         category: key,
         planned,
+        carryIn,
+        available,
         actual,
-        variance
+        variance,
+        carryOut
       }
     })
     .sort((a, b) => Math.abs(b.variance) - Math.abs(a.variance))
+})
+
+const carryInTotal = computed(() => {
+  if (!rolloverEnabled.value) return 0
+
+  let total = 0
+  for (const value of carryInForSelectedMonth.value.values()) {
+    total += value
+  }
+
+  return total
+})
+
+const carryOutTotal = computed(() => {
+  if (!rolloverEnabled.value) return 0
+
+  return budgetVsActual.value.reduce((sum, row) => sum + row.carryOut, 0)
+})
+
+const carryDeltaTotal = computed(() => {
+  if (!rolloverEnabled.value) return 0
+
+  return carryOutTotal.value - carryInTotal.value
 })
 
 const savingsOverrideModel = computed({
@@ -266,7 +400,33 @@ const savingsOverrideModel = computed({
       description="Plan income, savings, and spending per month, then compare against imported transactions."
       variant="naked"
       class="mb-2"
-    />
+    >
+      <div class="flex flex-wrap items-center justify-between gap-4 w-full">
+        <div class="flex items-center gap-4 flex-wrap">
+          <div class="flex items-center gap-3">
+            <USwitch v-model="rolloverEnabled" />
+            <span class="text-sm text-muted">
+              Rollover envelopes
+            </span>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <USwitch v-model="rolloverNegativeEnabled" :disabled="!rolloverEnabled" />
+            <span class="text-sm text-muted">
+              Carry overspend
+            </span>
+          </div>
+        </div>
+
+        <div v-if="rolloverEnabled" class="text-sm text-dimmed">
+          Carryover from last month: {{ formatCurrency(carryInTotal) }}
+          <span class="text-muted">·</span>
+          Change this month: {{ formatCurrency(carryDeltaTotal) }}
+          <span class="text-muted">·</span>
+          Carryover to next month: {{ formatCurrency(carryOutTotal) }}
+        </div>
+      </div>
+    </UPageCard>
 
     <UPageCard variant="subtle">
       <div class="flex flex-col gap-4">
@@ -486,12 +646,27 @@ const savingsOverrideModel = computed({
             class="flex items-center justify-between gap-3"
           >
             <span class="text-muted capitalize">{{ row.category }}</span>
-            <span class="text-dimmed">{{ formatCurrency(row.planned) }} / {{ formatCurrency(row.actual) }}</span>
+
+            <span class="text-dimmed">
+              <template v-if="rolloverEnabled">
+                {{ formatCurrency(row.planned) }}
+                <span class="text-muted">+ {{ formatCurrency(row.carryIn) }}</span>
+                <span class="text-muted">= {{ formatCurrency(row.available) }}</span>
+                <span class="text-muted">/ {{ formatCurrency(row.actual) }}</span>
+              </template>
+              <template v-else>
+                {{ formatCurrency(row.planned) }} / {{ formatCurrency(row.actual) }}
+              </template>
+            </span>
+
             <span
               class="font-medium"
               :class="row.variance >= 0 ? 'text-success' : 'text-error'"
             >
               {{ row.variance >= 0 ? '+' : '' }}{{ formatCurrency(row.variance) }}
+              <span v-if="rolloverEnabled && row.carryOut !== 0" class="text-muted">
+                (→ {{ formatCurrency(row.carryOut) }})
+              </span>
             </span>
           </div>
         </div>

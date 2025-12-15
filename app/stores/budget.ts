@@ -18,6 +18,8 @@ const toAmount = (value: unknown): number => {
 
 export const useBudgetStore = defineStore('budget', () => {
   const months = useStorage<BudgetMonthMap>('budget:months', {})
+  const rolloverEnabled = useStorage<boolean>('budget:rollover-enabled', false)
+  const rolloverNegativeEnabled = useStorage<boolean>('budget:rollover-negative-enabled', false)
 
   const getMonth = (monthId: string) => {
     if (!months.value[monthId]) {
@@ -105,6 +107,8 @@ export const useBudgetStore = defineStore('budget', () => {
 
   return {
     months,
+    rolloverEnabled,
+    rolloverNegativeEnabled,
     ensureMonth,
     getMonth,
     plannedIncomeTotal,
