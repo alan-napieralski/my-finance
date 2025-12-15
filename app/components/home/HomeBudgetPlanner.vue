@@ -178,9 +178,8 @@ const actualByCategory = computed(() => {
     const previous = buckets.get(key) ?? 0
     buckets.set(key, previous + spent)
 
-    // Ensure stable label casing based on first appearance
     if (label && key !== label) {
-      // no-op: we keep original label in the summaries below
+      // no-op
     }
   }
 

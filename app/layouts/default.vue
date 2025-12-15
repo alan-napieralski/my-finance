@@ -14,6 +14,13 @@ const links = [[{
     open.value = false
   }
 }, {
+  label: 'Analytics',
+  icon: 'i-lucide-line-chart',
+  to: '/analytics',
+  onSelect: () => {
+    open.value = false
+  }
+}, {
   label: 'Categories',
   icon: 'i-lucide-pie-chart',
   to: '/categories',
