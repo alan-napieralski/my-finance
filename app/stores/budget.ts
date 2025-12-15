@@ -84,7 +84,7 @@ export const useBudgetStore = defineStore('budget', () => {
 
   function addBudgetItem(monthId: string) {
     const month = getMonth(monthId)
-    month.items.push({ id: crypto.randomUUID(), name: '', category: 'Uncategorized', plannedAmount: 0 })
+    month.items.push({ id: crypto.randomUUID(), name: '', category: 'Uncategorized', plannedAmount: 0, purchased: false })
   }
 
   function updateBudgetItem(monthId: string, id: string, patch: Partial<BudgetItem>) {

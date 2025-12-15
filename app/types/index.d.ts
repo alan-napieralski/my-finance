@@ -101,6 +101,7 @@ export interface BudgetItem {
   name: string
   category: string
   plannedAmount: number
+  purchased?: boolean
   notes?: string
 }
 

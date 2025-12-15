@@ -50,6 +50,71 @@ const monthIds = computed(() => {
   })
 })
 
+const defaultCategoryOptions = [
+  'Bills',
+  'Subscriptions',
+  'Groceries',
+  'Transport',
+  'Eating out',
+  'Sport and hobbies',
+  'Wants',
+  'Needs',
+  'Savings',
+  'Transfers',
+  'Income',
+  'Other',
+  'Uncategorized'
+]
+
+const categoryOptions = computed(() => {
+  const seen = new Map<string, string>()
+
+  const add = (value: string | undefined) => {
+    if (!value) return
+
+    const trimmed = value.trim()
+    if (!trimmed) return
+
+    const key = trimmed.toLowerCase()
+    if (!seen.has(key)) {
+      seen.set(key, trimmed)
+    }
+  }
+
+  // Seed with defaults to keep a stable, friendly ordering.
+  for (const option of defaultCategoryOptions) {
+    add(option)
+  }
+
+  // Include categories already in your planned items.
+  for (const item of month.value.items) {
+    add(item.category)
+  }
+
+  // Include categories from recurring payments.
+  for (const payment of recurringPayments.value) {
+    add(payment.category)
+  }
+
+  // Include categories seen in imported transactions.
+  for (const tx of allTransactions.value) {
+    add(tx.category)
+  }
+
+  const defaults = defaultCategoryOptions
+    .map(option => option.toLowerCase())
+
+  const dynamic = Array.from(seen.entries())
+    .filter(([key]) => !defaults.includes(key))
+    .map(([, label]) => label)
+    .sort((a, b) => a.localeCompare(b))
+
+  const orderedDefaults = defaultCategoryOptions
+    .map(option => seen.get(option.toLowerCase()) ?? option)
+
+  return [...orderedDefaults, ...dynamic]
+})
+
 const monthTabItems = computed<TabsItem[]>(() => {
   return monthIds.value.map(monthId => ({
     label: format(new Date(`${monthId}-01T00:00:00`), 'MMM yyyy'),
@@ -597,13 +662,23 @@ const savingsOverrideModel = computed({
           :key="item.id"
           class="flex flex-col gap-3 px-4 py-3 sm:px-6 sm:py-4"
         >
-          <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-end justify-between gap-3">
+            <UFormField :name="`item-purchased-${item.id}`" label="Bought" class="w-full sm:w-28">
+              <UCheckbox v-model="item.purchased" />
+            </UFormField>
+
             <UFormField :name="`item-name-${item.id}`" label="Name" class="flex-1 min-w-[10rem]">
-              <UInput v-model="item.name" placeholder="Groceries, transport, etc." />
+              <UInput v-model="item.name" placeholder="New shoes, new laptop, etc." />
             </UFormField>
 
             <UFormField :name="`item-category-${item.id}`" label="Category" class="w-full sm:w-48">
-              <UInput v-model="item.category" placeholder="Bills, groceries, ..." />
+              <USelectMenu
+                v-model="item.category"
+                :items="categoryOptions"
+                placeholder="Select"
+                :search-input="{ placeholder: 'Search categories...' }"
+                class="w-full"
+              />
             </UFormField>
 
             <UFormField :name="`item-planned-${item.id}`" label="Planned" class="w-full sm:w-40">
