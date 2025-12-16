@@ -457,7 +457,7 @@ const savingsOverrideModel = computed({
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 sm:gap-6 lg:max-w-5xl">
+  <div class="flex flex-col gap-4 sm:gap-6 w-full">
     <UPageCard
       title="Monthly budget"
       description="Plan income, savings, and spending per month, then compare against imported transactions."
