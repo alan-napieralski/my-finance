@@ -129,7 +129,7 @@ watchEffect(() => {
   budgetStore.ensureMonth(selectedMonthId.value)
 })
 
-const month = computed(() => budgetStore.getMonth(selectedMonthId.value))
+const month = computed(() => budgetStore.getOrCreateMonth(selectedMonthId.value))
 
 const chronologicalMonthIds = computed(() => {
   return [...monthIds.value].reverse()
@@ -283,7 +283,7 @@ const plannedByCategoryBase = computed(() => {
 
 const buildPlannedBaseByCategoryForMonth = (monthId: string) => {
   const buckets = new Map<string, number>()
-  const month = budgetStore.getMonth(monthId)
+  const month = budgetStore.getOrCreateMonth(monthId)
 
   for (const item of month.items) {
     const planned = item.plannedAmount || 0
