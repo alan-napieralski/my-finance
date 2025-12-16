@@ -138,6 +138,13 @@ watchEffect(() => {
   budgetStore.ensureMonth(selectedMonthId.value)
 })
 
+// Auto-disable "Carry overspend" when "Rollover envelopes" is turned off
+watch(rolloverEnabled, (newValue) => {
+  if (!newValue && rolloverNegativeEnabled.value) {
+    rolloverNegativeEnabled.value = false
+  }
+})
+
 const month = computed(() => budgetStore.getOrCreateMonth(selectedMonthId.value))
 
 const chronologicalMonthIds = computed(() => {
