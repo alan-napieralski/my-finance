@@ -63,8 +63,9 @@ const { addRecurringPayment, removeRecurringPayment } = plansStore
               class="flex-1 min-w-[10rem]"
             >
               <UInput
-                v-model="payment.name"
+                :model-value="payment.name"
                 placeholder="Rent, Netflix, etc."
+                @update:model-value="value => plansStore.updateRecurringPayment(payment.id, { name: String(value) })"
               />
             </UFormField>
 
@@ -74,8 +75,9 @@ const { addRecurringPayment, removeRecurringPayment } = plansStore
               class="w-full sm:w-48"
             >
               <UInput
-                v-model="payment.category"
+                :model-value="payment.category"
                 placeholder="Bills, subscriptions, ..."
+                @update:model-value="value => plansStore.updateRecurringPayment(payment.id, { category: String(value) })"
               />
             </UFormField>
 
@@ -85,10 +87,11 @@ const { addRecurringPayment, removeRecurringPayment } = plansStore
               class="w-full sm:w-40"
             >
               <UInput
-                v-model.number="payment.monthlyAmount"
+                :model-value="payment.monthlyAmount"
                 type="number"
                 min="0"
                 step="10"
+                @update:model-value="value => plansStore.updateRecurringPayment(payment.id, { monthlyAmount: Number(value) })"
               />
             </UFormField>
 
@@ -106,10 +109,11 @@ const { addRecurringPayment, removeRecurringPayment } = plansStore
             label="Notes"
           >
             <UTextarea
-              v-model="payment.notes"
+              :model-value="payment.notes"
               :rows="2"
               autoresize
               placeholder="Optional notes."
+              @update:model-value="value => plansStore.updateRecurringPayment(payment.id, { notes: String(value) })"
             />
           </UFormField>
         </div>
