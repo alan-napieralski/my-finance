@@ -1,19 +1,12 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { usePlansStore } from '~/stores/plans'
+import { formatCurrency } from '~/utils/currency'
 
 const plansStore = usePlansStore()
 
 const { recurringPayments, totalRecurringPaymentsPerMonth } = storeToRefs(plansStore)
 const { addRecurringPayment, removeRecurringPayment } = plansStore
-
-const formatCurrency = (value: number) => {
-  return value.toLocaleString('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    maximumFractionDigits: 0
-  })
-}
 </script>
 
 <template>

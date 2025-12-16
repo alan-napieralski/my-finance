@@ -5,6 +5,7 @@ import { storeToRefs } from 'pinia'
 import { usePlansStore } from '~/stores/plans'
 import { useBudgetStore } from '~/stores/budget'
 import { parseTransactionDate } from '~/utils/dateParser'
+import { formatCurrency } from '~/utils/currency'
 
 type FinanceEntry = {
   id: string
@@ -127,14 +128,6 @@ const selectedMonthId = ref<string>(format(now, 'yyyy-MM'))
 watchEffect(() => {
   budgetStore.ensureMonth(selectedMonthId.value)
 })
-
-function formatCurrency(value: number): string {
-  return value.toLocaleString('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    maximumFractionDigits: 0
-  })
-}
 
 const month = computed(() => budgetStore.getMonth(selectedMonthId.value))
 

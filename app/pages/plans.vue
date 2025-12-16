@@ -2,6 +2,7 @@
 import type { TabsItem } from '@nuxt/ui'
 import { storeToRefs } from 'pinia'
 import { usePlansStore } from '~/stores/plans'
+import { formatCurrency } from '~/utils/currency'
 
 const plansStore = usePlansStore()
 
@@ -23,14 +24,6 @@ const items: TabsItem[] = [{
 }]
 
 const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
-
-const formatCurrency = (value: number) => {
-  return value.toLocaleString('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    maximumFractionDigits: 0
-  })
-}
 </script>
 
 <template>
