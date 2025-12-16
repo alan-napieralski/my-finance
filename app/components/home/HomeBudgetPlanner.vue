@@ -44,12 +44,21 @@ const {
   totalRecurringPaymentsPerMonth
 } = storeToRefs(plansStore)
 
-const now = new Date()
+const now = ref(new Date())
 const monthIds = computed(() => {
   return Array.from({ length: 12 }, (_, index) => {
-    return format(subMonths(now, index), 'yyyy-MM')
+    return format(subMonths(now.value, index), 'yyyy-MM')
   })
 })
+
+// Refresh on visibility change to handle overnight sessions
+if (import.meta.client) {
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      now.value = new Date()
+    }
+  })
+}
 
 const defaultCategoryOptions = [
   'Bills',
@@ -123,7 +132,7 @@ const monthTabItems = computed<TabsItem[]>(() => {
   }))
 })
 
-const selectedMonthId = ref<string>(format(now, 'yyyy-MM'))
+const selectedMonthId = ref<string>(format(now.value, 'yyyy-MM'))
 
 watchEffect(() => {
   budgetStore.ensureMonth(selectedMonthId.value)
@@ -201,7 +210,8 @@ const extractTransactions = (entry: FinanceEntry | null): Transaction[] => {
 const { data: latestEntry } = await useAsyncData<FinanceEntry | null>('finance-latest', async () => {
   try {
     return await $fetch<FinanceEntry>('/api/finance/latest')
-  } catch {
+  } catch (error) {
+    console.error('[HomeBudgetPlanner] Failed to fetch finance data:', error)
     return null
   }
 }, {
