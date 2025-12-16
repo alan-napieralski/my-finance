@@ -251,13 +251,8 @@ const actualByCategory = computed(() => {
     if (!spent) continue
 
     const key = resolveCategoryKey(tx.category)
-    const label = tx.category
     const previous = buckets.get(key) ?? 0
     buckets.set(key, previous + spent)
-
-    if (label && key !== label) {
-      // no-op
-    }
   }
 
   return Array.from(buckets.entries())
