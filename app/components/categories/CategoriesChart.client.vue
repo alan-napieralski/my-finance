@@ -8,10 +8,16 @@ const props = defineProps<{
   range: Range
 }>()
 
+type FinanceTransactionPayload = {
+  date: string
+  amount: string | number
+  category?: string
+}
+
 type FinanceEntry = {
   id: string
   timestamp: string
-  data: Record<string, unknown>
+  data: { transactions?: FinanceTransactionPayload[] } | FinanceTransactionPayload[]
 }
 
 type CategoryDatum = {
@@ -36,10 +42,10 @@ const extractTransactions = (entry: FinanceEntry | null): Transaction[] => {
   }
 
   const payload = entry.data
-  const source = Array.isArray(payload.transactions)
-    ? payload.transactions
-    : Array.isArray(payload)
-      ? payload
+  const source = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload.transactions)
+      ? payload.transactions
       : []
 
   return source
@@ -121,7 +127,8 @@ const categoryColorMap: Record<string, string> = {
 }
 
 const resolveCategoryKey = (category: string): string => {
-  return category.trim().toLowerCase()
+  const key = category.trim().toLowerCase()
+  return key || 'uncategorized'
 }
 
 const resolveCategoryColor = (category: string): string => {
