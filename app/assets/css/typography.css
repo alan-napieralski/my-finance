@@ -21,7 +21,7 @@
 
   h1,
   .h1 {
-    @apply text-fl-3xl mb-fl-lg leading-tight;
+    @apply text-fl-3xl mb-fl-sm leading-tight;
     max-height: 4rem;
     overflow: hidden;
   }
