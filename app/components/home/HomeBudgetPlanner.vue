@@ -342,11 +342,19 @@ const carryInByMonthId = computed(() => {
     return result
   }
 
+  // Only compute months up to and including the selected month to avoid
+  // recalculating future months that aren't visible.
+  const selectedIndex = chronologicalMonthIds.value.indexOf(selectedMonthId.value)
+  if (selectedIndex === -1) {
+    return result
+  }
+
+  const monthsToProcess = chronologicalMonthIds.value.slice(0, selectedIndex + 1)
   const allowNegative = rolloverNegativeEnabled.value
 
   let previousCarryOut = new Map<string, number>()
 
-  for (const monthId of chronologicalMonthIds.value) {
+  for (const monthId of monthsToProcess) {
     result.set(monthId, new Map(previousCarryOut))
 
     const plannedBase = buildPlannedBaseByCategoryForMonth(monthId)
