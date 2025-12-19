@@ -7,10 +7,17 @@ import { useBudgetStore } from '~/stores/budget'
 import { parseTransactionDate } from '~/utils/dateParser'
 import { formatCurrency } from '~/utils/currency'
 
+type FinanceTransactionPayload = {
+  date: string
+  amount: string | number
+  category?: string
+  description?: string
+}
+
 type FinanceEntry = {
   id: string
   timestamp: string
-  data: Record<string, unknown>
+  data: { transactions?: FinanceTransactionPayload[] } | FinanceTransactionPayload[]
 }
 
 type Transaction = {
@@ -144,8 +151,11 @@ const monthTabItems = computed<TabsItem[]>(() => {
 
 const selectedMonthId = ref<string>(format(now.value, 'yyyy-MM'))
 
-watchEffect(() => {
-  budgetStore.ensureMonth(selectedMonthId.value)
+// Auto-disable "Carry overspend" when "Rollover envelopes" is turned off
+watch(rolloverEnabled, (newValue) => {
+  if (!newValue && rolloverNegativeEnabled.value) {
+    rolloverNegativeEnabled.value = false
+  }
 })
 
 const month = computed(() => budgetStore.getOrCreateMonth(selectedMonthId.value))
@@ -186,7 +196,14 @@ const plannedNet = computed(() => {
   return plannedIncomeTotal.value - plannedOutflowTotal.value
 })
 
-const resolveCategoryKey = (value: string): string => value.trim().toLowerCase()
+const resolveCategoryKey = (value: string): string => {
+  const key = value.trim().toLowerCase()
+  return key || 'uncategorized'
+}
+
+const calculateCarryOut = (variance: number, allowNegative: boolean): number => {
+  return allowNegative ? variance : (variance > 0 ? variance : 0)
+}
 
 const extractTransactions = (entry: FinanceEntry | null): Transaction[] => {
   if (!entry || !entry.data) {
@@ -194,10 +211,10 @@ const extractTransactions = (entry: FinanceEntry | null): Transaction[] => {
   }
 
   const payload = entry.data
-  const source = Array.isArray(payload.transactions)
-    ? payload.transactions
-    : Array.isArray(payload)
-      ? payload
+  const source = Array.isArray(payload)
+    ? payload
+    : Array.isArray(payload.transactions)
+      ? payload.transactions
       : []
 
   return source
@@ -217,15 +234,16 @@ const extractTransactions = (entry: FinanceEntry | null): Transaction[] => {
     .filter((item): item is Transaction => item !== null)
 }
 
-const { data: latestEntry } = await useAsyncData<FinanceEntry | null>('finance-latest', async () => {
-  try {
-    return await $fetch<FinanceEntry>('/api/finance/latest')
-  } catch (error) {
-    console.error('[HomeBudgetPlanner] Failed to fetch finance data:', error)
-    return null
-  }
+const { data: latestEntry, error: fetchError } = await useAsyncData<FinanceEntry | null>('finance-latest', async () => {
+  return await $fetch<FinanceEntry>('/api/finance/latest')
 }, {
   default: () => null
+})
+
+watch(fetchError, (error) => {
+  if (error) {
+    console.error('[HomeBudgetPlanner] Failed to fetch finance data:', error)
+  }
 })
 
 const getMonthRange = (monthId: string) => {
@@ -256,7 +274,7 @@ const actualNet = computed(() => {
   return actualIncome.value - actualSpent.value
 })
 
-const actualByCategory = computed(() => {
+const actualByCategoryMap = computed(() => {
   const buckets = new Map<string, number>()
 
   for (const tx of monthTransactions.value) {
@@ -268,40 +286,19 @@ const actualByCategory = computed(() => {
     buckets.set(key, previous + spent)
   }
 
-  return Array.from(buckets.entries())
+  return buckets
+})
+
+const actualByCategory = computed(() => {
+  return Array.from(actualByCategoryMap.value.entries())
     .map(([key, value]) => ({
-      key,
       category: key,
       value
     }))
     .sort((a, b) => b.value - a.value)
 })
 
-const plannedByCategoryBase = computed(() => {
-  const buckets = new Map<string, number>()
-
-  for (const item of month.value.items) {
-    const planned = item.plannedAmount || 0
-    if (!planned) continue
-
-    const key = resolveCategoryKey(item.category)
-    const previous = buckets.get(key) ?? 0
-    buckets.set(key, previous + planned)
-  }
-
-  for (const payment of recurringPayments.value) {
-    const planned = payment.monthlyAmount || 0
-    if (!planned) continue
-
-    const key = resolveCategoryKey(payment.category ?? 'Recurring')
-    const previous = buckets.get(key) ?? 0
-    buckets.set(key, previous + planned)
-  }
-
-  return buckets
-})
-
-const buildPlannedBaseByCategoryForMonth = (monthId: string) => {
+function buildPlannedBaseByCategoryForMonth(monthId: string) {
   const buckets = new Map<string, number>()
   const month = budgetStore.getOrCreateMonth(monthId)
 
@@ -325,6 +322,10 @@ const buildPlannedBaseByCategoryForMonth = (monthId: string) => {
 
   return buckets
 }
+
+const plannedByCategoryBase = computed(() => {
+  return buildPlannedBaseByCategoryForMonth(selectedMonthId.value)
+})
 
 const buildActualByCategoryForMonth = (monthId: string) => {
   const { start, end } = getMonthRange(monthId)
@@ -351,11 +352,19 @@ const carryInByMonthId = computed(() => {
     return result
   }
 
+  // Only compute months up to and including the selected month to avoid
+  // recalculating future months that aren't visible.
+  const selectedIndex = chronologicalMonthIds.value.indexOf(selectedMonthId.value)
+  if (selectedIndex === -1) {
+    return result
+  }
+
+  const monthsToProcess = chronologicalMonthIds.value.slice(0, selectedIndex + 1)
   const allowNegative = rolloverNegativeEnabled.value
 
   let previousCarryOut = new Map<string, number>()
 
-  for (const monthId of chronologicalMonthIds.value) {
+  for (const monthId of monthsToProcess) {
     result.set(monthId, new Map(previousCarryOut))
 
     const plannedBase = buildPlannedBaseByCategoryForMonth(monthId)
@@ -372,7 +381,7 @@ const carryInByMonthId = computed(() => {
       const available = (plannedBase.get(key) ?? 0) + (previousCarryOut.get(key) ?? 0)
       const spent = actual.get(key) ?? 0
       const variance = available - spent
-      const out = allowNegative ? variance : (variance > 0 ? variance : 0)
+      const out = calculateCarryOut(variance, allowNegative)
 
       if (out !== 0) {
         carryOut.set(key, out)
@@ -383,21 +392,6 @@ const carryInByMonthId = computed(() => {
   }
 
   return result
-})
-
-const actualByCategoryMap = computed(() => {
-  const buckets = new Map<string, number>()
-
-  for (const tx of monthTransactions.value) {
-    const spent = tx.amount < 0 ? Math.abs(tx.amount) : 0
-    if (!spent) continue
-
-    const key = resolveCategoryKey(tx.category)
-    const previous = buckets.get(key) ?? 0
-    buckets.set(key, previous + spent)
-  }
-
-  return buckets
 })
 
 const carryInForSelectedMonth = computed(() => {
@@ -421,7 +415,7 @@ const budgetVsActual = computed<CategorySummary[]>(() => {
       const actual = actualByCategoryMap.value.get(key) ?? 0
       const variance = available - actual
       const carryOut = rolloverEnabled.value
-        ? (allowNegative ? variance : (variance > 0 ? variance : 0))
+        ? calculateCarryOut(variance, allowNegative)
         : 0
 
       return {
@@ -467,7 +461,7 @@ const savingsOverrideModel = computed({
 </script>
 
 <template>
-  <div class="flex flex-col gap-4 sm:gap-6 lg:max-w-5xl">
+  <div class="flex flex-col gap-4 sm:gap-6 w-full">
     <UPageCard
       title="Monthly budget"
       description="Plan income, savings, and spending per month, then compare against imported transactions."
@@ -574,7 +568,12 @@ const savingsOverrideModel = computed({
                 </UFormField>
 
                 <UFormField :name="`income-amount-${line.id}`" label="Amount" class="w-full sm:w-40">
-                  <UInput v-model.number="line.amount" type="number" step="10" />
+                  <UInput
+                    :model-value="line.amount"
+                    type="number"
+                    step="10"
+                    @update:model-value="budgetStore.updateIncomeLine(selectedMonthId, line.id, { amount: $event })"
+                  />
                 </UFormField>
 
                 <UButton
@@ -691,10 +690,11 @@ const savingsOverrideModel = computed({
 
             <UFormField :name="`item-planned-${item.id}`" label="Planned" class="w-full sm:w-40">
               <UInput
-                v-model.number="item.plannedAmount"
+                :model-value="item.plannedAmount"
                 type="number"
                 min="0"
                 step="10"
+                @update:model-value="budgetStore.updateBudgetItem(selectedMonthId, item.id, { plannedAmount: $event })"
               />
             </UFormField>
 
@@ -766,10 +766,14 @@ const savingsOverrideModel = computed({
           </h3>
         </template>
 
-        <div v-if="actualByCategory.length" class="flex flex-col gap-2 text-sm">
+        <div v-if="fetchError" class="text-sm text-error">
+          Failed to load transaction data. Please try refreshing the page.
+        </div>
+
+        <div v-else-if="actualByCategory.length" class="flex flex-col gap-2 text-sm">
           <div
             v-for="row in actualByCategory.slice(0, 8)"
-            :key="row.key"
+            :key="row.category"
             class="flex items-center justify-between gap-3"
           >
             <span class="text-muted capitalize">{{ row.category }}</span>

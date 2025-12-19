@@ -81,6 +81,11 @@ export const useBudgetStore = defineStore('budget', () => {
     const index = month.income.findIndex(line => line.id === id)
     if (index === -1) return
 
+    // Sanitize amount to prevent NaN states
+    if ('amount' in patch) {
+      patch.amount = toAmount(patch.amount)
+    }
+
     Object.assign(month.income[index]!, patch)
   }
 
@@ -102,6 +107,11 @@ export const useBudgetStore = defineStore('budget', () => {
     const month = getOrCreateMonth(monthId)
     const index = month.items.findIndex(item => item.id === id)
     if (index === -1) return
+
+    // Sanitize plannedAmount to prevent NaN states
+    if ('plannedAmount' in patch) {
+      patch.plannedAmount = toAmount(patch.plannedAmount)
+    }
 
     Object.assign(month.items[index]!, patch)
   }
