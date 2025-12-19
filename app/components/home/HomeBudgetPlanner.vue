@@ -558,7 +558,12 @@ const savingsOverrideModel = computed({
                 </UFormField>
 
                 <UFormField :name="`income-amount-${line.id}`" label="Amount" class="w-full sm:w-40">
-                  <UInput v-model.number="line.amount" type="number" step="10" />
+                  <UInput
+                    :model-value="line.amount"
+                    type="number"
+                    step="10"
+                    @update:model-value="budgetStore.updateIncomeLine(selectedMonthId, line.id, { amount: $event })"
+                  />
                 </UFormField>
 
                 <UButton
@@ -675,10 +680,11 @@ const savingsOverrideModel = computed({
 
             <UFormField :name="`item-planned-${item.id}`" label="Planned" class="w-full sm:w-40">
               <UInput
-                v-model.number="item.plannedAmount"
+                :model-value="item.plannedAmount"
                 type="number"
                 min="0"
                 step="10"
+                @update:model-value="budgetStore.updateBudgetItem(selectedMonthId, item.id, { plannedAmount: $event })"
               />
             </UFormField>
 
