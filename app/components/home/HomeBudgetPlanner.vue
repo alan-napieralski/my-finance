@@ -35,6 +35,9 @@ type CategorySummary = {
   actual: number
   variance: number
   carryOut: number
+  previousMonth: number
+  momChange: number
+  momChangePercent: number | null
 }
 
 const plansStore = usePlansStore()
@@ -140,6 +143,9 @@ const monthTabItems = computed<TabsItem[]>(() => {
 })
 
 const selectedMonthId = ref<string>(format(now.value, 'yyyy-MM'))
+
+const previousMonthId = computed(() => format(subMonths(new Date(`${selectedMonthId.value}-01T00:00:00`), 1), 'yyyy-MM'))
+const previousMonthLabel = computed(() => format(subMonths(new Date(`${selectedMonthId.value}-01T00:00:00`), 1), 'MMM'))
 
 // Auto-disable "Carry overspend" when "Rollover envelopes" is turned off
 watch(rolloverEnabled, (newValue) => {
@@ -279,15 +285,6 @@ const actualByCategoryMap = computed(() => {
   return buckets
 })
 
-const actualByCategory = computed(() => {
-  return Array.from(actualByCategoryMap.value.entries())
-    .map(([key, value]) => ({
-      category: key,
-      value
-    }))
-    .sort((a, b) => b.value - a.value)
-})
-
 function buildPlannedBaseByCategoryForMonth(monthId: string) {
   const buckets = new Map<string, number>()
   const month = budgetStore.getOrCreateMonth(monthId)
@@ -388,12 +385,17 @@ const carryInForSelectedMonth = computed(() => {
   return carryInByMonthId.value.get(selectedMonthId.value) ?? new Map<string, number>()
 })
 
+const previousMonthActualByCategory = computed(() => {
+  return buildActualByCategoryForMonth(previousMonthId.value)
+})
+
 const budgetVsActual = computed<CategorySummary[]>(() => {
   const keys = new Set<string>()
 
   for (const key of plannedByCategoryBase.value.keys()) keys.add(key)
   for (const key of actualByCategoryMap.value.keys()) keys.add(key)
   for (const key of carryInForSelectedMonth.value.keys()) keys.add(key)
+  for (const key of previousMonthActualByCategory.value.keys()) keys.add(key)
 
   const allowNegative = rolloverNegativeEnabled.value
 
@@ -408,6 +410,16 @@ const budgetVsActual = computed<CategorySummary[]>(() => {
         ? calculateCarryOut(variance, allowNegative)
         : 0
 
+      const previousMonth = previousMonthActualByCategory.value.get(key) ?? 0
+      const momChange = actual - previousMonth
+
+      let momChangePercent: number | null = null
+      if (previousMonth > 0) {
+        momChangePercent = Math.round((momChange / previousMonth) * 100)
+      } else if (actual > 0) {
+        momChangePercent = 100
+      }
+
       return {
         category: key,
         planned,
@@ -415,7 +427,10 @@ const budgetVsActual = computed<CategorySummary[]>(() => {
         available,
         actual,
         variance,
-        carryOut
+        carryOut,
+        previousMonth,
+        momChange,
+        momChangePercent
       }
     })
     .sort((a, b) => Math.abs(b.variance) - Math.abs(a.variance))
@@ -704,77 +719,111 @@ const savingsOverrideModel = computed({
       </div>
     </UPageCard>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <UCard>
-        <template #header>
+    <UCard>
+      <template #header>
+        <div class="flex items-center justify-between gap-4 flex-wrap">
           <h3 class="text-sm font-medium text-highlighted">
-            Budget vs Actual (by category)
+            Category breakdown
           </h3>
-        </template>
+          <p class="text-xs text-muted">
+            Sorted by biggest variance (planned vs actual)
+          </p>
+        </div>
+      </template>
 
-        <div v-if="budgetVsActual.length" class="flex flex-col gap-2 text-sm">
+      <div v-if="fetchError" class="text-sm text-error">
+        Failed to load transaction data. Please try refreshing the page.
+      </div>
+
+      <div v-else-if="budgetVsActual.length" class="overflow-x-auto">
+        <div class="min-w-[640px]">
+          <!-- Header row -->
+          <div class="flex items-center gap-3 py-2 border-b border-default text-xs text-muted uppercase">
+            <div class="flex-1 min-w-[8rem]">
+              Category
+            </div>
+            <div class="w-24 text-right">
+              Planned
+            </div>
+            <div class="w-24 text-right">
+              Actual
+            </div>
+            <div class="w-28 text-right">
+              Variance
+            </div>
+            <div class="w-24 text-right">
+              {{ previousMonthLabel }}
+            </div>
+            <div class="w-24 text-right">
+              MoM
+            </div>
+          </div>
+
+          <!-- Data rows -->
           <div
             v-for="row in budgetVsActual"
             :key="row.category"
-            class="flex items-center justify-between gap-3"
+            class="flex items-center gap-3 py-2 border-b border-default/50 text-sm"
           >
-            <span class="text-muted capitalize">{{ row.category }}</span>
+            <div class="flex-1 min-w-[8rem] text-muted capitalize truncate">
+              {{ row.category }}
+            </div>
 
-            <span class="text-dimmed">
-              <template v-if="rolloverEnabled">
-                {{ formatCurrency(row.planned) }}
-                <span class="text-muted">+ {{ formatCurrency(row.carryIn) }}</span>
-                <span class="text-muted">= {{ formatCurrency(row.available) }}</span>
-                <span class="text-muted">/ {{ formatCurrency(row.actual) }}</span>
+            <div class="w-24 text-right text-dimmed">
+              <template v-if="rolloverEnabled && row.carryIn > 0">
+                <span class="text-muted">{{ formatCurrency(row.planned) }}</span>
+                <span class="text-xs text-muted"> +{{ formatCurrency(row.carryIn) }}</span>
               </template>
               <template v-else>
-                {{ formatCurrency(row.planned) }} / {{ formatCurrency(row.actual) }}
+                {{ formatCurrency(row.planned) }}
               </template>
-            </span>
+            </div>
 
-            <span
-              class="font-medium"
+            <div class="w-24 text-right text-highlighted font-medium">
+              {{ formatCurrency(row.actual) }}
+            </div>
+
+            <div
+              class="w-28 text-right font-medium"
               :class="row.variance >= 0 ? 'text-success' : 'text-error'"
             >
               {{ row.variance >= 0 ? '+' : '' }}{{ formatCurrency(row.variance) }}
-              <span v-if="rolloverEnabled && row.carryOut !== 0" class="text-muted">
-                (→ {{ formatCurrency(row.carryOut) }})
+              <span v-if="rolloverEnabled && row.carryOut !== 0" class="text-xs text-muted">
+                → {{ formatCurrency(row.carryOut) }}
               </span>
-            </span>
+            </div>
+
+            <div class="w-24 text-right text-dimmed">
+              {{ formatCurrency(row.previousMonth) }}
+            </div>
+
+            <div
+              class="w-24 text-right font-medium flex items-center justify-end gap-1"
+              :class="{
+                'text-success': row.momChange < 0,
+                'text-error': row.momChange > 0,
+                'text-muted': row.momChange === 0
+              }"
+            >
+              <UIcon
+                v-if="row.momChange !== 0"
+                :name="row.momChange > 0 ? 'i-lucide-trending-up' : 'i-lucide-trending-down'"
+                class="size-3.5"
+              />
+              <template v-if="row.momChangePercent !== null">
+                {{ row.momChange > 0 ? '+' : '' }}{{ row.momChangePercent }}%
+              </template>
+              <template v-else>
+                —
+              </template>
+            </div>
           </div>
         </div>
+      </div>
 
-        <div v-else class="text-sm text-muted">
-          Add planned items or import transactions to see category variance.
-        </div>
-      </UCard>
-
-      <UCard>
-        <template #header>
-          <h3 class="text-sm font-medium text-highlighted">
-            Actual spending (top categories)
-          </h3>
-        </template>
-
-        <div v-if="fetchError" class="text-sm text-error">
-          Failed to load transaction data. Please try refreshing the page.
-        </div>
-
-        <div v-else-if="actualByCategory.length" class="flex flex-col gap-2 text-sm">
-          <div
-            v-for="row in actualByCategory.slice(0, 8)"
-            :key="row.category"
-            class="flex items-center justify-between gap-3"
-          >
-            <span class="text-muted capitalize">{{ row.category }}</span>
-            <span class="text-highlighted font-medium">{{ formatCurrency(row.value) }}</span>
-          </div>
-        </div>
-
-        <div v-else class="text-sm text-muted">
-          No imported transactions found for this month.
-        </div>
-      </UCard>
-    </div>
+      <div v-else class="text-sm text-muted">
+        Add planned items or import transactions to see category breakdown.
+      </div>
+    </UCard>
   </div>
 </template>
