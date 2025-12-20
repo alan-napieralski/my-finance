@@ -399,7 +399,13 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                     :model-value="month.income[0]?.amount ?? 0"
                     type="number"
                     step="10"
-                    @update:model-value="budgetStore.updateIncomeLine(selectedMonthId, month.income[0]!.id, { amount: $event })"
+                    :disabled="!month.income[0]"
+                    @update:model-value="(value) => {
+                      const incomeLine = month.income[0]
+                      if (incomeLine) {
+                        budgetStore.updateIncomeLine(selectedMonthId, incomeLine.id, { amount: value })
+                      }
+                    }"
                   />
                 </UFormField>
               </div>
