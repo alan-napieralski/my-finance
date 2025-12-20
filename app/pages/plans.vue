@@ -125,11 +125,11 @@ const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
               :key="want.id"
               class="flex flex-col gap-3 px-4 py-3 sm:px-6 sm:py-4"
             >
-              <div class="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3">
+              <div class="flex items-start justify-between gap-3">
                 <UFormField
                   :name="`name-${want.id}`"
                   label="Name"
-                  class="flex-1 w-full sm:w-auto sm:min-w-[10rem]"
+                  class="flex-1 min-w-0"
                 >
                   <UInput
                     v-model="want.name"
@@ -137,24 +137,16 @@ const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
                   />
                 </UFormField>
 
-                <UFormField
-                  :name="`invested-${want.id}`"
-                  label="Invested"
-                  class="w-full sm:w-40"
-                >
-                  <USwitch v-model="want.invested" />
-                </UFormField>
-
                 <UButton
                   color="neutral"
                   variant="ghost"
                   icon="i-lucide-trash-2"
-                  class="self-start sm:self-center"
+                  class="shrink-0 mt-6"
                   @click="removeWant(want.id)"
                 />
               </div>
 
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <UFormField
                   :name="`targetAmount-${want.id}`"
                   label="Target amount"
@@ -171,7 +163,6 @@ const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
                 <UFormField
                   :name="`monthsToTarget-${want.id}`"
                   label="Months"
-                  description="How many months you want to take to reach the target."
                 >
                   <UInput
                     v-model.number="want.monthsToTarget"
@@ -181,31 +172,30 @@ const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
                     placeholder="Optional"
                   />
                 </UFormField>
-              </div>
 
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <UFormField
-                  :name="`manualMonthly-${want.id}`"
-                  label="Monthly amount (manual)"
-                  description="If set, this is used instead of the calculated amount. Set to 0 to use the calculation."
+                  :name="`calculatedMonthly-${want.id}`"
+                  label="Monthly (calculated)"
                 >
                   <UInput
-                    v-model.number="want.monthlyAmount"
-                    type="number"
-                    min="0"
-                    step="10"
+                    :model-value="formatCurrency(getWantMonthlyAmount({ ...want, monthlyAmount: 0 }))"
+                    disabled
                   />
                 </UFormField>
-
-                <div class="flex flex-col justify-end">
-                  <p class="text-xs text-muted uppercase mb-1.5">
-                    Monthly amount (calculated)
-                  </p>
-                  <p class="text-lg font-semibold text-highlighted">
-                    {{ formatCurrency(getWantMonthlyAmount({ ...want, monthlyAmount: 0 })) }}
-                  </p>
-                </div>
               </div>
+
+              <UFormField
+                :name="`manualMonthly-${want.id}`"
+                label="Monthly override (optional)"
+                description="If set, overrides the calculated monthly amount. Set to 0 to use the calculation."
+              >
+                <UInput
+                  v-model.number="want.monthlyAmount"
+                  type="number"
+                  min="0"
+                  step="10"
+                />
+              </UFormField>
 
               <UFormField
                 :name="`notes-${want.id}`"

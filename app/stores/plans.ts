@@ -51,8 +51,7 @@ export const usePlansStore = defineStore('plans', () => {
       ...want,
       monthlyAmount,
       targetAmount: want.targetAmount == null ? undefined : toNonNegativeNumber(want.targetAmount),
-      monthsToTarget: want.monthsToTarget == null ? (derivedMonths ?? undefined) : (toPositiveIntegerOrNull(want.monthsToTarget) ?? undefined),
-      invested: Boolean(want.invested)
+      monthsToTarget: want.monthsToTarget == null ? (derivedMonths ?? undefined) : (toPositiveIntegerOrNull(want.monthsToTarget) ?? undefined)
     }
   })
 
@@ -94,8 +93,7 @@ export const usePlansStore = defineStore('plans', () => {
       id: crypto.randomUUID(),
       name: '',
       monthlyAmount: 0,
-      monthsToTarget: 12,
-      invested: false
+      monthsToTarget: 12
     })
   }
 

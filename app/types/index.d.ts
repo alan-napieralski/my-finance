@@ -71,10 +71,6 @@ export interface WantPlan {
   targetDate?: string
 
   monthsToTarget?: number
-  /**
-   * Whether you’ve invested into this want yet (simple yes/no flag).
-   */
-  invested?: boolean
 
   notes?: string
 }

@@ -467,14 +467,6 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                           <span class="text-xs text-muted">
                             Default: {{ formatCurrency(plansStore.getWantMonthlyAmount(want)) }}
                           </span>
-                          <UBadge
-                            v-if="want.invested"
-                            color="success"
-                            variant="subtle"
-                            size="sm"
-                          >
-                            Invested
-                          </UBadge>
                         </div>
                       </div>
 
@@ -560,14 +552,6 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                         <td class="py-2.5 text-highlighted font-medium">
                           <div class="flex items-center gap-2 min-w-0">
                             <span class="truncate">{{ want.name || 'Untitled want' }}</span>
-                            <UBadge
-                              v-if="want.invested"
-                              color="success"
-                              variant="subtle"
-                              size="sm"
-                            >
-                              Invested
-                            </UBadge>
                           </div>
                         </td>
                         <td class="py-2.5 text-right text-dimmed whitespace-nowrap">
