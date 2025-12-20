@@ -27,14 +27,47 @@ type Transaction = {
   description: string
 }
 
-type CategorySummary = {
-  category: string
-  planned: number
+type MainCategory = 'wants' | 'needs' | 'savings'
+
+type SubcategorySummary = {
+  subcategory: string
+  mainCategory: MainCategory
   actual: number
-  variance: number
   previousMonth: number
   momChange: number
   momChangePercent: number | null
+}
+
+type MainCategorySummary = {
+  mainCategory: MainCategory
+  actual: number
+  previousMonth: number
+  momChange: number
+  momChangePercent: number | null
+}
+
+// Map subcategories to main categories
+const subcategoryToMainCategory: Record<string, MainCategory> = {
+  // Needs
+  'bills': 'needs',
+  'subscriptions': 'needs',
+  'groceries': 'needs',
+  'transport': 'needs',
+  'recurring': 'needs',
+  'eating out': 'needs',
+  // Wants
+  'sport and hobbies': 'wants',
+  'shopping': 'wants',
+  'other': 'wants',
+  'uncategorized': 'wants',
+  // Savings
+  'savings': 'savings',
+  'transfers': 'savings'
+}
+
+const getMainCategory = (subcategory: string): MainCategory => {
+  const key = subcategory.toLowerCase()
+  return subcategoryToMainCategory[key] ?? 'wants'
 }
 
 const plansStore = usePlansStore()
@@ -42,7 +75,6 @@ const budgetStore = useBudgetStore()
 
 const {
   savings,
-  recurringPayments,
   totalSavingsPerMonth,
   totalWantsPerMonth,
   totalDebtPaymentsPerMonth,
@@ -93,8 +125,6 @@ const plannedIncomeTotal = computed(() => {
   return month.value.income.reduce((sum, line) => sum + (line.amount || 0), 0)
 })
 
-const plannedItemsTotal = computed(() => 0)
-
 const plannedSavings = computed(() => {
   const override = month.value.plannedSavingsOverride
   if (override != null) {
@@ -109,14 +139,6 @@ const plannedCommitmentsTotal = computed(() => {
     + totalWantsPerMonth.value
     + totalDebtPaymentsPerMonth.value
     + totalRecurringPaymentsPerMonth.value
-})
-
-const plannedOutflowTotal = computed(() => {
-  return plannedCommitmentsTotal.value + plannedItemsTotal.value
-})
-
-const plannedNet = computed(() => {
-  return plannedIncomeTotal.value - plannedOutflowTotal.value
 })
 
 const resolveCategoryKey = (value: string): string => {
@@ -193,40 +215,6 @@ const actualNet = computed(() => {
   return actualIncome.value - actualSpent.value
 })
 
-const actualByCategoryMap = computed(() => {
-  const buckets = new Map<string, number>()
-
-  for (const tx of monthTransactions.value) {
-    const spent = tx.amount < 0 ? Math.abs(tx.amount) : 0
-    if (!spent) continue
-
-    const key = resolveCategoryKey(tx.category)
-    const previous = buckets.get(key) ?? 0
-    buckets.set(key, previous + spent)
-  }
-
-  return buckets
-})
-
-function buildPlannedBaseByCategoryForMonth(_monthId: string) {
-  const buckets = new Map<string, number>()
-
-  for (const payment of recurringPayments.value) {
-    const planned = payment.monthlyAmount || 0
-    if (!planned) continue
-
-    const key = resolveCategoryKey(payment.category ?? 'Recurring')
-    const previous = buckets.get(key) ?? 0
-    buckets.set(key, previous + planned)
-  }
-
-  return buckets
-}
-
-const plannedByCategoryBase = computed(() => {
-  return buildPlannedBaseByCategoryForMonth(selectedMonthId.value)
-})
-
 const buildActualByCategoryForMonth = (monthId: string) => {
   const { start, end } = getMonthRange(monthId)
   const buckets = new Map<string, number>()
@@ -245,23 +233,22 @@ const buildActualByCategoryForMonth = (monthId: string) => {
   return buckets
 }
 
+const actualByCategoryMap = computed(() => buildActualByCategoryForMonth(selectedMonthId.value))
+
 const previousMonthActualByCategory = computed(() => {
   return buildActualByCategoryForMonth(previousMonthId.value)
 })
 
-const budgetVsActual = computed<CategorySummary[]>(() => {
+// Subcategory breakdown with MoM
+const subcategoryBreakdown = computed<SubcategorySummary[]>(() => {
   const keys = new Set<string>()
 
-  for (const key of plannedByCategoryBase.value.keys()) keys.add(key)
   for (const key of actualByCategoryMap.value.keys()) keys.add(key)
   for (const key of previousMonthActualByCategory.value.keys()) keys.add(key)
 
   return Array.from(keys)
     .map((key) => {
-      const planned = plannedByCategoryBase.value.get(key) ?? 0
       const actual = actualByCategoryMap.value.get(key) ?? 0
-      const variance = planned - actual
-
       const previousMonth = previousMonthActualByCategory.value.get(key) ?? 0
       const momChange = actual - previousMonth
 
@@ -273,16 +260,47 @@ const budgetVsActual = computed<CategorySummary[]>(() => {
       }
 
       return {
-        category: key,
-        planned,
+        subcategory: key,
+        mainCategory: getMainCategory(key),
         actual,
-        variance,
         previousMonth,
         momChange,
         momChangePercent
       }
     })
-    .sort((a, b) => Math.abs(b.variance) - Math.abs(a.variance))
+    .sort((a, b) => b.actual - a.actual)
+})
+
+// Main category breakdown with MoM
+const mainCategoryBreakdown = computed<MainCategorySummary[]>(() => {
+  const mainCategories: MainCategory[] = ['needs', 'wants', 'savings']
+
+  return mainCategories.map((mainCategory) => {
+    const actual = subcategoryBreakdown.value
+      .filter(s => s.mainCategory === mainCategory)
+      .reduce((sum, s) => sum + s.actual, 0)
+
+    const previousMonth = subcategoryBreakdown.value
+      .filter(s => s.mainCategory === mainCategory)
+      .reduce((sum, s) => sum + s.previousMonth, 0)
+
+    const momChange = actual - previousMonth
+
+    let momChangePercent: number | null = null
+    if (previousMonth > 0) {
+      momChangePercent = Math.round((momChange / previousMonth) * 100)
+    } else if (actual > 0) {
+      momChangePercent = 100
+    }
+
+    return {
+      mainCategory,
+      actual,
+      previousMonth,
+      momChange,
+      momChangePercent
+    }
+  })
 })
 
 const savingsOverrideModel = computed({
@@ -295,7 +313,7 @@ const savingsOverrideModel = computed({
   <div class="flex flex-col gap-4 sm:gap-6 w-full">
     <UPageCard
       title="Monthly budget"
-      description="Plan income, savings, and spending per month, then compare against imported transactions."
+      description="Track your income and spending by category."
       variant="naked"
       class="mb-2"
     />
@@ -307,7 +325,7 @@ const savingsOverrideModel = computed({
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <UCard>
             <p class="text-xs text-muted uppercase mb-1.5">
-              Planned income
+              Income
             </p>
             <p class="text-2xl font-semibold text-highlighted">
               {{ formatCurrency(plannedIncomeTotal) }}
@@ -315,15 +333,15 @@ const savingsOverrideModel = computed({
           </UCard>
           <UCard>
             <p class="text-xs text-muted uppercase mb-1.5">
-              Planned outflow
+              Actual income
             </p>
             <p class="text-2xl font-semibold text-highlighted">
-              {{ formatCurrency(plannedOutflowTotal) }}
+              {{ formatCurrency(actualIncome) }}
             </p>
           </UCard>
           <UCard>
             <p class="text-xs text-muted uppercase mb-1.5">
-              Actual spent
+              Spent
             </p>
             <p class="text-2xl font-semibold text-highlighted">
               {{ formatCurrency(actualSpent) }}
@@ -331,13 +349,13 @@ const savingsOverrideModel = computed({
           </UCard>
           <UCard>
             <p class="text-xs text-muted uppercase mb-1.5">
-              Net (planned / actual)
+              Net
             </p>
-            <p class="text-2xl font-semibold text-highlighted">
-              {{ formatCurrency(plannedNet) }}
-              <span class="text-muted text-base font-normal">
-                / {{ formatCurrency(actualNet) }}
-              </span>
+            <p
+              class="text-2xl font-semibold"
+              :class="actualNet >= 0 ? 'text-success' : 'text-error'"
+            >
+              {{ formatCurrency(actualNet) }}
             </p>
           </UCard>
         </div>
@@ -467,77 +485,56 @@ const savingsOverrideModel = computed({
       </div>
     </UPageCard>
 
-    <UCard>
-      <template #header>
-        <div class="flex items-center justify-between gap-4 flex-wrap">
+    <div v-if="fetchError" class="text-sm text-error">
+      Failed to load transaction data. Please try refreshing the page.
+    </div>
+
+    <div v-else-if="subcategoryBreakdown.length" class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <!-- Main Categories Table -->
+      <UCard>
+        <template #header>
           <h3 class="text-sm font-medium text-highlighted">
-            Category breakdown
+            Spending by category
           </h3>
-          <p class="text-xs text-muted">
-            Sorted by biggest variance (planned vs actual)
-          </p>
-        </div>
-      </template>
+        </template>
 
-      <div v-if="fetchError" class="text-sm text-error">
-        Failed to load transaction data. Please try refreshing the page.
-      </div>
-
-      <div v-else-if="budgetVsActual.length" class="overflow-x-auto">
-        <div class="min-w-[640px]">
+        <div class="flex flex-col">
           <!-- Header row -->
           <div class="flex items-center gap-3 py-2 border-b border-default text-xs text-muted uppercase">
-            <div class="flex-1 min-w-[8rem]">
+            <div class="flex-1">
               Category
             </div>
             <div class="w-24 text-right">
-              Planned
+              Spent
             </div>
-            <div class="w-24 text-right">
-              Actual
-            </div>
-            <div class="w-28 text-right">
-              Variance
-            </div>
-            <div class="w-24 text-right">
+            <div class="w-20 text-right">
               {{ previousMonthLabel }}
             </div>
-            <div class="w-24 text-right">
+            <div class="w-20 text-right">
               MoM
             </div>
           </div>
 
           <!-- Data rows -->
           <div
-            v-for="row in budgetVsActual"
-            :key="row.category"
-            class="flex items-center gap-3 py-2 border-b border-default/50 text-sm"
+            v-for="row in mainCategoryBreakdown"
+            :key="row.mainCategory"
+            class="flex items-center gap-3 py-2.5 border-b border-default/50 text-sm"
           >
-            <div class="flex-1 min-w-[8rem] text-muted capitalize truncate">
-              {{ row.category }}
-            </div>
-
-            <div class="w-24 text-right text-dimmed">
-              {{ formatCurrency(row.planned) }}
+            <div class="flex-1 text-highlighted font-medium capitalize">
+              {{ row.mainCategory }}
             </div>
 
             <div class="w-24 text-right text-highlighted font-medium">
               {{ formatCurrency(row.actual) }}
             </div>
 
-            <div
-              class="w-28 text-right font-medium"
-              :class="row.variance >= 0 ? 'text-success' : 'text-error'"
-            >
-              {{ row.variance >= 0 ? '+' : '' }}{{ formatCurrency(row.variance) }}
-            </div>
-
-            <div class="w-24 text-right text-dimmed">
+            <div class="w-20 text-right text-dimmed">
               {{ formatCurrency(row.previousMonth) }}
             </div>
 
             <div
-              class="w-24 text-right font-medium flex items-center justify-end gap-1"
+              class="w-20 text-right font-medium flex items-center justify-end gap-1"
               :class="{
                 'text-success': row.momChange < 0,
                 'text-error': row.momChange > 0,
@@ -558,11 +555,84 @@ const savingsOverrideModel = computed({
             </div>
           </div>
         </div>
-      </div>
+      </UCard>
 
-      <div v-else class="text-sm text-muted">
-        Import transactions to see category breakdown.
-      </div>
-    </UCard>
+      <!-- Subcategories Table -->
+      <UCard>
+        <template #header>
+          <h3 class="text-sm font-medium text-highlighted">
+            Detailed breakdown
+          </h3>
+        </template>
+
+        <div class="flex flex-col">
+          <!-- Header row -->
+          <div class="flex items-center gap-3 py-2 border-b border-default text-xs text-muted uppercase">
+            <div class="flex-1">
+              Subcategory
+            </div>
+            <div class="w-16 text-right">
+              Type
+            </div>
+            <div class="w-24 text-right">
+              Spent
+            </div>
+            <div class="w-20 text-right">
+              MoM
+            </div>
+          </div>
+
+          <!-- Data rows -->
+          <div
+            v-for="row in subcategoryBreakdown"
+            :key="row.subcategory"
+            class="flex items-center gap-3 py-2 border-b border-default/50 text-sm"
+          >
+            <div class="flex-1 text-muted capitalize truncate">
+              {{ row.subcategory }}
+            </div>
+
+            <div class="w-16 text-right">
+              <UBadge
+                :color="row.mainCategory === 'needs' ? 'info' : row.mainCategory === 'wants' ? 'warning' : 'success'"
+                variant="subtle"
+                size="xs"
+              >
+                {{ row.mainCategory }}
+              </UBadge>
+            </div>
+
+            <div class="w-24 text-right text-highlighted font-medium">
+              {{ formatCurrency(row.actual) }}
+            </div>
+
+            <div
+              class="w-20 text-right font-medium flex items-center justify-end gap-1"
+              :class="{
+                'text-success': row.momChange < 0,
+                'text-error': row.momChange > 0,
+                'text-muted': row.momChange === 0
+              }"
+            >
+              <UIcon
+                v-if="row.momChange !== 0"
+                :name="row.momChange > 0 ? 'i-lucide-trending-up' : 'i-lucide-trending-down'"
+                class="size-3.5"
+              />
+              <template v-if="row.momChangePercent !== null">
+                {{ row.momChange > 0 ? '+' : '' }}{{ row.momChangePercent }}%
+              </template>
+              <template v-else>
+                —
+              </template>
+            </div>
+          </div>
+        </div>
+      </UCard>
+    </div>
+
+    <div v-else class="text-sm text-muted">
+      Import transactions to see spending breakdown.
+    </div>
   </div>
 </template>
