@@ -2,6 +2,7 @@
 import type { TabsItem } from '@nuxt/ui'
 import { storeToRefs } from 'pinia'
 import { usePlansStore } from '~/stores/plans'
+import { formatCurrency } from '~/utils/currency'
 
 const plansStore = usePlansStore()
 
@@ -17,17 +18,12 @@ const items: TabsItem[] = [{
 }, {
   label: 'Debts',
   value: 'debts'
+}, {
+  label: 'Recurring',
+  value: 'recurring'
 }]
 
-const current = ref<'savings' | 'wants' | 'debts'>('savings')
-
-const formatCurrency = (value: number) => {
-  return value.toLocaleString('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    maximumFractionDigits: 0
-  })
-}
+const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
 </script>
 
 <template>
@@ -214,6 +210,8 @@ const formatCurrency = (value: number) => {
           </div>
         </UPageCard>
       </div>
+
+      <PlansRecurringPayments v-else-if="current === 'recurring'" />
 
       <div v-else class="flex flex-col gap-4 sm:gap-6 lg:max-w-3xl">
         <UPageCard

@@ -4,10 +4,12 @@ export default eventHandler(async () => {
   const latest = financeStore.getLatest()
 
   if (!latest) {
-    throw createError({
-      statusCode: 404,
-      statusMessage: 'No finance data available'
-    })
+    // Seed a sample entry only in dev environment
+    if (process.env.NODE_ENV === 'development') {
+      const seeded = financeStore.add({ seeded: true, amount: 1000 })
+      return seeded
+    }
+    return null
   }
 
   return latest

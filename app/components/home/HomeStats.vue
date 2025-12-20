@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { Period, Range, Stat } from '~/types'
 import { parseTransactionDate } from '~/utils/dateParser'
+import { formatCurrency } from '~/utils/currency'
 
 const props = defineProps<{
   period: Period
@@ -16,14 +17,6 @@ type FinanceEntry = {
 type Transaction = {
   date: Date
   amount: number
-}
-
-function formatCurrency(value: number): string {
-  return value.toLocaleString('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    maximumFractionDigits: 0
-  })
 }
 
 const extractTransactions = (entry: FinanceEntry | null): Transaction[] => {
