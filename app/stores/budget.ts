@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 import { defineStore } from 'pinia'
 import { useStorage } from '@vueuse/core'
-import type { BudgetMonth, IncomeLine } from '~/types'
+import type { BudgetMonth, IncomeLine, WantOverride } from '~/types'
 
 type BudgetMonthMap = Record<string, BudgetMonth>
 
@@ -19,6 +19,11 @@ const validateMonthId = (monthId: string): void => {
   if (!/^\d{4}-\d{2}$/.test(monthId)) {
     throw new Error(`Invalid monthId format: ${monthId}. Expected YYYY-MM`)
   }
+}
+
+type WantOverridePatch = {
+  disabled?: boolean
+  amountOverride?: number | null
 }
 
 export const useBudgetStore = defineStore('budget', () => {
@@ -90,6 +95,53 @@ export const useBudgetStore = defineStore('budget', () => {
     month.income = month.income.filter(line => line.id !== id)
   }
 
+  function setWantOverride(monthId: string, wantId: string, patch: WantOverridePatch) {
+    const month = getOrCreateMonth(monthId)
+    month.wantOverrides ||= {}
+
+    const current = month.wantOverrides[wantId] ?? {}
+    const next: WantOverride = { ...current }
+
+    if ('disabled' in patch) {
+      if (patch.disabled) {
+        next.disabled = true
+      } else {
+        delete next.disabled
+      }
+    }
+
+    if ('amountOverride' in patch) {
+      if (patch.amountOverride == null) {
+        delete next.amountOverride
+      } else {
+        next.amountOverride = Math.max(0, toAmount(patch.amountOverride))
+      }
+    }
+
+    if (!next.disabled && next.amountOverride == null) {
+      const { [wantId]: _removed, ...rest } = month.wantOverrides
+      month.wantOverrides = rest
+    } else {
+      month.wantOverrides[wantId] = next
+    }
+
+    if (!Object.keys(month.wantOverrides).length) {
+      month.wantOverrides = undefined
+    }
+  }
+
+  function clearWantOverride(monthId: string, wantId: string) {
+    const month = getOrCreateMonth(monthId)
+    if (!month.wantOverrides) return
+
+    const { [wantId]: _removed, ...rest } = month.wantOverrides
+    month.wantOverrides = rest
+
+    if (!Object.keys(month.wantOverrides).length) {
+      month.wantOverrides = undefined
+    }
+  }
+
   function clearMonth(monthId: string) {
     validateMonthId(monthId)
     const { [monthId]: _removed, ...rest } = months.value
@@ -107,6 +159,8 @@ export const useBudgetStore = defineStore('budget', () => {
     plannedSavingsOverride,
     // Mutations
     setPlannedSavingsOverride,
+    setWantOverride,
+    clearWantOverride,
     addIncomeLine,
     updateIncomeLine,
     removeIncomeLine,
