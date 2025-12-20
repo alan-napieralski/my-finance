@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { h } from 'vue'
+import { h, resolveComponent } from 'vue'
 import type { TableColumn } from '@nuxt/ui'
 import type { Period, Range } from '~/types'
 import { parseTransactionDate } from '~/utils/dateParser'
@@ -23,6 +23,14 @@ type TransactionRow = {
   amount: number
   balance?: number
 }
+
+type SortField = 'date' | 'amount' | 'balance'
+type SortDirection = 'asc' | 'desc'
+
+const searchQuery = ref('')
+const selectedCategories = ref<string[]>([])
+const sortField = ref<SortField>('date')
+const sortDirection = ref<SortDirection>('desc')
 
 const extractTransactions = (entry: FinanceEntry | null): TransactionRow[] => {
   if (!entry || !entry.data) {
@@ -64,7 +72,7 @@ const extractTransactions = (entry: FinanceEntry | null): TransactionRow[] => {
     .filter((item): item is TransactionRow => item !== null)
 }
 
-const { data } = await useAsyncData<TransactionRow[]>('finance-transactions', async () => {
+const { data: allTransactions } = await useAsyncData<TransactionRow[]>('finance-transactions', async () => {
   let latest: FinanceEntry | null = null
 
   try {
@@ -81,16 +89,85 @@ const { data } = await useAsyncData<TransactionRow[]>('finance-transactions', as
     return date >= props.range.start && date <= props.range.end
   })
 
-  return filtered.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+  return filtered
 }, {
   watch: [() => props.period, () => props.range],
   default: () => []
 })
 
+const availableCategories = computed(() => {
+  const categories = new Set<string>()
+  allTransactions.value.forEach((tx) => {
+    if (tx.category) {
+      categories.add(tx.category)
+    }
+  })
+  return Array.from(categories).sort()
+})
+
+const filteredAndSortedData = computed(() => {
+  let result = allTransactions.value
+
+  // Filter by search query
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    result = result.filter(tx => tx.description.toLowerCase().includes(query))
+  }
+
+  // Filter by categories
+  if (selectedCategories.value.length > 0) {
+    result = result.filter(tx => tx.category && selectedCategories.value.includes(tx.category))
+  }
+
+  // Sort
+  result = [...result].sort((a, b) => {
+    let aValue: number
+    let bValue: number
+
+    if (sortField.value === 'date') {
+      aValue = new Date(a.date).getTime()
+      bValue = new Date(b.date).getTime()
+    } else if (sortField.value === 'amount') {
+      aValue = a.amount
+      bValue = b.amount
+    } else {
+      aValue = a.balance ?? 0
+      bValue = b.balance ?? 0
+    }
+
+    return sortDirection.value === 'asc' ? aValue - bValue : bValue - aValue
+  })
+
+  return result
+})
+
+const toggleSort = (field: SortField) => {
+  if (sortField.value === field) {
+    sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
+  } else {
+    sortField.value = field
+    sortDirection.value = 'desc'
+  }
+}
+
 const columns: TableColumn<TransactionRow>[] = [
   {
     accessorKey: 'date',
-    header: 'Date',
+    header: () => {
+      const UIcon = resolveComponent('UIcon')
+      return h('button', {
+        class: 'flex items-center gap-1.5 hover:bg-primary/10 hover:text-primary transition-all cursor-pointer px-2 py-1 -mx-2 -my-1 rounded',
+        onClick: () => toggleSort('date')
+      }, [
+        'Date',
+        h(UIcon, {
+          name: sortField.value === 'date'
+            ? (sortDirection.value === 'asc' ? 'i-lucide-arrow-up' : 'i-lucide-arrow-down')
+            : 'i-lucide-arrow-up-down',
+          class: sortField.value === 'date' ? 'size-4 text-primary' : 'size-4'
+        })
+      ])
+    },
     cell: ({ row }) => {
       return new Date(row.getValue('date') as string).toLocaleString('en-GB', {
         day: '2-digit',
@@ -112,7 +189,21 @@ const columns: TableColumn<TransactionRow>[] = [
   },
   {
     accessorKey: 'amount',
-    header: () => h('div', { class: 'text-right' }, 'Amount'),
+    header: () => {
+      const UIcon = resolveComponent('UIcon')
+      return h('button', {
+        class: 'flex items-center gap-1.5 hover:bg-primary/10 hover:text-primary transition-all cursor-pointer ml-auto px-2 py-1 -mx-2 -my-1 rounded',
+        onClick: () => toggleSort('amount')
+      }, [
+        'Amount',
+        h(UIcon, {
+          name: sortField.value === 'amount'
+            ? (sortDirection.value === 'asc' ? 'i-lucide-arrow-up' : 'i-lucide-arrow-down')
+            : 'i-lucide-arrow-up-down',
+          class: sortField.value === 'amount' ? 'size-4 text-primary' : 'size-4'
+        })
+      ])
+    },
     cell: ({ row }) => {
       const amount = Number(row.getValue('amount'))
 
@@ -126,7 +217,21 @@ const columns: TableColumn<TransactionRow>[] = [
   },
   {
     accessorKey: 'balance',
-    header: () => h('div', { class: 'text-right' }, 'Balance'),
+    header: () => {
+      const UIcon = resolveComponent('UIcon')
+      return h('button', {
+        class: 'flex items-center gap-1.5 hover:bg-primary/10 hover:text-primary transition-all cursor-pointer ml-auto px-2 py-1 -mx-2 -my-1 rounded',
+        onClick: () => toggleSort('balance')
+      }, [
+        'Balance',
+        h(UIcon, {
+          name: sortField.value === 'balance'
+            ? (sortDirection.value === 'asc' ? 'i-lucide-arrow-up' : 'i-lucide-arrow-down')
+            : 'i-lucide-arrow-up-down',
+          class: sortField.value === 'balance' ? 'size-4 text-primary' : 'size-4'
+        })
+      ])
+    },
     cell: ({ row }) => {
       const balance = row.getValue('balance')
       if (balance == null || balance === '') {
@@ -150,16 +255,53 @@ const columns: TableColumn<TransactionRow>[] = [
 </script>
 
 <template>
-  <UTable
-    :data="data"
-    :columns="columns"
-    class="shrink-0"
-    :ui="{
-      base: 'table-fixed border-separate border-spacing-0',
-      thead: '[&>tr]:bg-elevated/50 [&>tr]:after:content-none',
-      tbody: '[&>tr]:last:[&>td]:border-b-0',
-      th: 'first:rounded-l-lg last:rounded-r-lg border-y border-default first:border-l last:border-r',
-      td: 'border-b border-default'
-    }"
-  />
+  <div class="flex flex-col gap-4">
+    <!-- Filters -->
+    <UCard>
+      <div class="flex flex-col sm:flex-row gap-3">
+        <UInput
+          v-model="searchQuery"
+          icon="i-lucide-search"
+          placeholder="Search by description..."
+          class="flex-1"
+        />
+
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <USelectMenu
+            v-model="selectedCategories"
+            :items="availableCategories"
+            multiple
+            placeholder="Filter by category"
+            class="flex-1 sm:w-64"
+          >
+            <span v-if="selectedCategories.length === 0">All categories</span>
+            <span v-else>{{ selectedCategories.length }} selected</span>
+          </USelectMenu>
+
+          <UButton
+            v-if="selectedCategories.length > 0"
+            color="neutral"
+            variant="ghost"
+            icon="i-lucide-x"
+            square
+            @click="selectedCategories = []"
+          />
+        </div>
+      </div>
+    </UCard>
+
+    <!-- Table -->
+    <UTable
+      :data="filteredAndSortedData"
+      :columns="columns"
+      class="shrink-0"
+      :ui="{
+        base: 'table-fixed border-separate border-spacing-0',
+        thead: '[&>tr]:bg-elevated/50 [&>tr]:after:content-none',
+        tbody: '[&>tr]:last:[&>td]:border-b-0',
+        th: 'first:rounded-l-lg last:rounded-r-lg border-y border-default first:border-l last:border-r',
+        td: 'border-b border-default'
+      }"
+    />
+  </div>
 </template>
