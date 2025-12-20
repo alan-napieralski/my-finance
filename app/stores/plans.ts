@@ -172,7 +172,7 @@ export const usePlansStore = defineStore('plans', () => {
       id: crypto.randomUUID(),
       name: '',
       monthlyAmount: 0,
-      category: 'Bills'
+      category: 'bills'
     })
   }
 

@@ -1,12 +1,31 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { usePlansStore } from '~/stores/plans'
+import { subcategoryToMainCategory } from '~/utils/budgetCategories'
 import { formatCurrency } from '~/utils/currency'
 
 const plansStore = usePlansStore()
 
 const { recurringPayments, totalRecurringPaymentsPerMonth } = storeToRefs(plansStore)
 const { addRecurringPayment, removeRecurringPayment } = plansStore
+
+const categoryKeys = Object.keys(subcategoryToMainCategory)
+
+const formatCategoryLabel = (key: string): string => {
+  return key ? key.charAt(0).toUpperCase() + key.slice(1) : key
+}
+
+const categoryItems = computed(() => {
+  return categoryKeys.map(key => ({
+    label: formatCategoryLabel(key),
+    value: key
+  }))
+})
+
+const normalizeCategory = (value: string | undefined): string => {
+  const key = (value ?? '').trim().toLowerCase()
+  return categoryKeys.includes(key) ? key : 'uncategorized'
+}
 </script>
 
 <template>
@@ -74,9 +93,9 @@ const { addRecurringPayment, removeRecurringPayment } = plansStore
               label="Category"
               class="w-full sm:w-48"
             >
-              <UInput
-                :model-value="payment.category"
-                placeholder="Bills, subscriptions, ..."
+              <USelect
+                :model-value="normalizeCategory(payment.category)"
+                :items="categoryItems"
                 @update:model-value="value => plansStore.updateRecurringPayment(payment.id, { category: String(value) })"
               />
             </UFormField>
