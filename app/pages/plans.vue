@@ -11,7 +11,7 @@ const plansStore = usePlansStore()
 const budgetStore = useBudgetStore()
 
 const { savings, wants, debts, totalSavingsPerMonth, totalWantsPerMonth } = storeToRefs(plansStore)
-const { setGeneralSavings, addWant, removeWant, addDebt, removeDebt, getWantMonthlyAmount, getDebtMonthlyPayment } = plansStore
+const { setGeneralSavings, addWant, removeWant, addDebt, removeDebt, getDebtMonthlyPayment } = plansStore
 
 const getWantCalculatedMonthlyAmount = (want: WantPlan): number => {
   const targetAmount = Number(want.targetAmount ?? 0)
