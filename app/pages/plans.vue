@@ -29,15 +29,7 @@ const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
 <template>
   <UDashboardPanel id="plans">
     <template #header>
-      <UDashboardNavbar title="Plans" :ui="{ right: 'gap-3' }">
-        <template #leading>
-          <UDashboardSidebarCollapse />
-        </template>
-
-        <template #right>
-          <!-- Placeholder for future actions (e.g., sync, export) -->
-        </template>
-      </UDashboardNavbar>
+      <UDashboardNavbar title="Plans" />
 
       <UDashboardToolbar>
         <div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 w-full">
