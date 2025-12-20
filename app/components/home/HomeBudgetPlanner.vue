@@ -6,57 +6,16 @@ import { usePlansStore } from '~/stores/plans'
 import { useBudgetStore } from '~/stores/budget'
 import { parseTransactionDate } from '~/utils/dateParser'
 import { formatCurrency } from '~/utils/currency'
-import type { FinanceEntry, Transaction } from '~/types'
-
-type MainCategory = 'wants' | 'needs' | 'savings'
-
-type SubcategorySummary = {
-  subcategory: string
-  mainCategory: MainCategory
-  actual: number
-  previousMonth: number
-  momChange: number
-  momChangePercent: number | null
-}
-
-type MainCategorySummary = {
-  mainCategory: MainCategory
-  actual: number
-  previousMonth: number
-  momChange: number
-  momChangePercent: number | null
-}
-
-// Map subcategories to main categories
-const subcategoryToMainCategory: Record<string, MainCategory> = {
-  // Needs
-  'bills': 'needs',
-  'subscriptions': 'needs',
-  'groceries': 'needs',
-  'transport': 'needs',
-  'recurring': 'needs',
-  'eating out': 'needs',
-  // Wants
-  'sport and hobbies': 'wants',
-  'shopping': 'wants',
-  'other': 'wants',
-  'uncategorized': 'wants',
-  // Savings
-  'savings': 'savings'
-}
-
-const getMainCategory = (subcategory: string): MainCategory => {
-  const key = subcategory.toLowerCase()
-  return subcategoryToMainCategory[key] ?? 'wants'
-}
+import { getMainCategory, mainCategories } from '~/utils/budgetCategories'
+import type { FinanceEntry, MainCategorySummary, SubcategorySummary, Transaction } from '~/types'
 
 const plansStore = usePlansStore()
 const budgetStore = useBudgetStore()
 
 const {
   savings,
+  wants,
   totalSavingsPerMonth,
-  totalWantsPerMonth,
   totalDebtPaymentsPerMonth,
   totalRecurringPaymentsPerMonth
 } = storeToRefs(plansStore)
@@ -114,9 +73,24 @@ const plannedSavings = computed(() => {
   return savings.value.monthlyAmount ?? totalSavingsPerMonth.value
 })
 
+const resolveWantMonthlyForMonth = (wantId: string): number => {
+  const want = wants.value.find(w => w.id === wantId)
+  if (!want) return 0
+
+  const override = month.value.wantOverrides?.[wantId]
+  if (override?.disabled) return 0
+
+  const defaultMonthly = plansStore.getWantMonthlyAmount(want)
+  return override?.amountOverride ?? defaultMonthly
+}
+
+const plannedWantsTotal = computed(() => {
+  return wants.value.reduce((sum, want) => sum + resolveWantMonthlyForMonth(want.id), 0)
+})
+
 const plannedCommitmentsTotal = computed(() => {
   return plannedSavings.value
-    + totalWantsPerMonth.value
+    + plannedWantsTotal.value
     + totalDebtPaymentsPerMonth.value
     + totalRecurringPaymentsPerMonth.value
 })
@@ -235,8 +209,6 @@ const subcategoryBreakdown = computed<SubcategorySummary[]>(() => {
       let momChangePercent: number | null = null
       if (previousMonth > 0) {
         momChangePercent = Math.round((momChange / previousMonth) * 100)
-      } else if (actual > 0) {
-        momChangePercent = 100
       }
 
       return {
@@ -253,8 +225,6 @@ const subcategoryBreakdown = computed<SubcategorySummary[]>(() => {
 
 // Main category breakdown with MoM
 const mainCategoryBreakdown = computed<MainCategorySummary[]>(() => {
-  const mainCategories: MainCategory[] = ['needs', 'wants', 'savings']
-
   return mainCategories.map((mainCategory) => {
     const actual = subcategoryBreakdown.value
       .filter(s => s.mainCategory === mainCategory)
@@ -269,8 +239,6 @@ const mainCategoryBreakdown = computed<MainCategorySummary[]>(() => {
     let momChangePercent: number | null = null
     if (previousMonth > 0) {
       momChangePercent = Math.round((momChange / previousMonth) * 100)
-    } else if (actual > 0) {
-      momChangePercent = 100
     }
 
     return {
@@ -398,7 +366,11 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                 class="flex flex-col gap-3 pt-3 border-t border-default/50"
               >
                 <UFormField :name="`income-name-${line.id}`" label="Name" class="w-full">
-                  <UInput v-model="line.name" placeholder="Bonus, side income, etc." />
+                  <UInput
+                    :model-value="line.name"
+                    placeholder="Bonus, side income, etc."
+                    @update:model-value="budgetStore.updateIncomeLine(selectedMonthId, line.id, { name: $event })"
+                  />
                 </UFormField>
 
                 <div class="flex items-end gap-3 min-w-0">
@@ -458,8 +430,8 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
 
               <div class="text-sm space-y-2">
                 <div class="flex items-center justify-between gap-3">
-                  <span class="text-muted">Wants (from Plans)</span>
-                  <span class="text-highlighted font-medium">{{ formatCurrency(totalWantsPerMonth) }}</span>
+                  <span class="text-muted">Wants (this month)</span>
+                  <span class="text-highlighted font-medium">{{ formatCurrency(plannedWantsTotal) }}</span>
                 </div>
                 <div class="flex items-center justify-between gap-3">
                   <span class="text-muted">Debt payments (from Plans)</span>
@@ -472,6 +444,173 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                 <div class="flex items-center justify-between gap-3 pt-2 border-t border-default">
                   <span class="text-muted">Total commitments</span>
                   <span class="text-highlighted font-semibold">{{ formatCurrency(plannedCommitmentsTotal) }}</span>
+                </div>
+              </div>
+
+              <div class="pt-4 border-t border-default/50">
+                <h4 class="text-sm font-medium text-highlighted mb-3">
+                  Wants ({{ format(new Date(`${selectedMonthId}-01T00:00:00`), 'MMM yyyy') }})
+                </h4>
+
+                <div v-if="wants.length" class="sm:hidden divide-y divide-default/50">
+                  <div
+                    v-for="want in wants"
+                    :key="want.id"
+                    class="py-3 flex flex-col gap-3"
+                  >
+                    <div class="flex items-start justify-between gap-3">
+                      <div class="min-w-0">
+                        <div class="text-sm text-highlighted font-medium truncate">
+                          {{ want.name || 'Untitled want' }}
+                        </div>
+                        <div class="mt-1 flex items-center gap-2 flex-wrap">
+                          <span class="text-xs text-muted">
+                            Default: {{ formatCurrency(plansStore.getWantMonthlyAmount(want)) }}
+                          </span>
+                          <UBadge
+                            v-if="want.invested"
+                            color="success"
+                            variant="subtle"
+                            size="sm"
+                          >
+                            Invested
+                          </UBadge>
+                        </div>
+                      </div>
+
+                      <div class="text-right shrink-0">
+                        <div class="text-xs text-muted">
+                          Effective
+                        </div>
+                        <div class="text-sm text-highlighted font-medium whitespace-nowrap">
+                          {{ formatCurrency(resolveWantMonthlyForMonth(want.id)) }}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="flex items-end gap-3">
+                      <UFormField
+                        :name="`want-override-${want.id}`"
+                        label="Override"
+                        class="flex-1"
+                      >
+                        <UInput
+                          :model-value="month.wantOverrides?.[want.id]?.amountOverride"
+                          type="number"
+                          min="0"
+                          step="10"
+                          placeholder="(default)"
+                          @update:model-value="(value) => {
+                            const amount = value == null ? null : Number(value)
+                            budgetStore.setWantOverride(selectedMonthId, want.id, { amountOverride: amount !== null && Number.isFinite(amount) ? amount : null })
+                          }"
+                        />
+                      </UFormField>
+
+                      <UFormField
+                        :name="`want-disabled-${want.id}`"
+                        label="Disabled"
+                        class="w-28"
+                      >
+                        <USwitch
+                          :model-value="Boolean(month.wantOverrides?.[want.id]?.disabled)"
+                          @update:model-value="value => budgetStore.setWantOverride(selectedMonthId, want.id, { disabled: Boolean(value) })"
+                        />
+                      </UFormField>
+
+                      <UButton
+                        color="neutral"
+                        variant="ghost"
+                        icon="i-lucide-rotate-ccw"
+                        class="shrink-0"
+                        @click="budgetStore.clearWantOverride(selectedMonthId, want.id)"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div v-if="wants.length" class="hidden sm:block overflow-x-auto">
+                  <table class="w-full text-sm">
+                    <thead>
+                      <tr class="border-b border-default text-xs text-muted uppercase">
+                        <th class="py-2 text-left font-medium">
+                          Want
+                        </th>
+                        <th class="py-2 text-right font-medium">
+                          Default
+                        </th>
+                        <th class="py-2 text-left font-medium">
+                          Override
+                        </th>
+                        <th class="py-2 text-center font-medium">
+                          Disabled
+                        </th>
+                        <th class="py-2 text-right font-medium">
+                          Effective
+                        </th>
+                        <th class="py-2 text-right font-medium" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr
+                        v-for="want in wants"
+                        :key="want.id"
+                        class="border-b border-default/50"
+                      >
+                        <td class="py-2.5 text-highlighted font-medium">
+                          <div class="flex items-center gap-2 min-w-0">
+                            <span class="truncate">{{ want.name || 'Untitled want' }}</span>
+                            <UBadge
+                              v-if="want.invested"
+                              color="success"
+                              variant="subtle"
+                              size="sm"
+                            >
+                              Invested
+                            </UBadge>
+                          </div>
+                        </td>
+                        <td class="py-2.5 text-right text-dimmed whitespace-nowrap">
+                          {{ formatCurrency(plansStore.getWantMonthlyAmount(want)) }}
+                        </td>
+                        <td class="py-2.5">
+                          <UInput
+                            :model-value="month.wantOverrides?.[want.id]?.amountOverride"
+                            type="number"
+                            min="0"
+                            step="10"
+                            placeholder="(default)"
+                            class="w-36"
+                            @update:model-value="(value) => {
+                              const amount = value == null ? null : Number(value)
+                              budgetStore.setWantOverride(selectedMonthId, want.id, { amountOverride: amount !== null && Number.isFinite(amount) ? amount : null })
+                            }"
+                          />
+                        </td>
+                        <td class="py-2.5 text-center">
+                          <USwitch
+                            :model-value="Boolean(month.wantOverrides?.[want.id]?.disabled)"
+                            @update:model-value="value => budgetStore.setWantOverride(selectedMonthId, want.id, { disabled: Boolean(value) })"
+                          />
+                        </td>
+                        <td class="py-2.5 text-right text-highlighted font-medium whitespace-nowrap">
+                          {{ formatCurrency(resolveWantMonthlyForMonth(want.id)) }}
+                        </td>
+                        <td class="py-2.5 text-right">
+                          <UButton
+                            color="neutral"
+                            variant="ghost"
+                            icon="i-lucide-rotate-ccw"
+                            @click="budgetStore.clearWantOverride(selectedMonthId, want.id)"
+                          />
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <div v-else class="text-sm text-muted">
+                  No wants yet. Add some in Plans → Wants.
                 </div>
               </div>
             </div>
@@ -530,6 +669,7 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                   <template v-if="row.momChangePercent !== null">
                     {{ row.momChange > 0 ? '+' : '' }}{{ row.momChangePercent }}%
                   </template>
+                  <template v-else-if="row.actual > 0 && row.previousMonth === 0">New</template>
                   <template v-else>—</template>
                 </span>
               </div>
@@ -587,6 +727,7 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                     <template v-if="row.momChangePercent !== null">
                       {{ row.momChange > 0 ? '+' : '' }}{{ row.momChangePercent }}%
                     </template>
+                    <template v-else-if="row.actual > 0 && row.previousMonth === 0">New</template>
                     <template v-else>—</template>
                   </span>
                 </td>
@@ -650,6 +791,7 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                   <template v-if="row.momChangePercent !== null">
                     {{ row.momChange > 0 ? '+' : '' }}{{ row.momChangePercent }}%
                   </template>
+                  <template v-else-if="row.actual > 0 && row.previousMonth === 0">New</template>
                   <template v-else>—</template>
                 </span>
               </div>
@@ -713,6 +855,7 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                     <template v-if="row.momChangePercent !== null">
                       {{ row.momChange > 0 ? '+' : '' }}{{ row.momChangePercent }}%
                     </template>
+                    <template v-else-if="row.actual > 0 && row.previousMonth === 0">New</template>
                     <template v-else>—</template>
                   </span>
                 </td>
