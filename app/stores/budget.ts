@@ -24,8 +24,6 @@ const validateMonthId = (monthId: string): void => {
 
 export const useBudgetStore = defineStore('budget', () => {
   const months = useStorage<BudgetMonthMap>('budget:months', {})
-  const rolloverEnabled = useStorage<boolean>('budget:rollover-enabled', false)
-  const rolloverNegativeEnabled = useStorage<boolean>('budget:rollover-negative-enabled', false)
 
   const getMonth = (monthId: string): BudgetMonth | undefined => {
     validateMonthId(monthId)
@@ -129,8 +127,6 @@ export const useBudgetStore = defineStore('budget', () => {
 
   return {
     months,
-    rolloverEnabled,
-    rolloverNegativeEnabled,
     // Accessors
     getMonth,
     getOrCreateMonth,

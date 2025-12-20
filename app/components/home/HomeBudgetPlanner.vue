@@ -30,11 +30,8 @@ type Transaction = {
 type CategorySummary = {
   category: string
   planned: number
-  carryIn: number
-  available: number
   actual: number
   variance: number
-  carryOut: number
   previousMonth: number
   momChange: number
   momChangePercent: number | null
@@ -42,8 +39,6 @@ type CategorySummary = {
 
 const plansStore = usePlansStore()
 const budgetStore = useBudgetStore()
-
-const { rolloverEnabled, rolloverNegativeEnabled } = storeToRefs(budgetStore)
 
 const {
   savings,
@@ -157,18 +152,7 @@ const selectedMonthId = ref<string>(format(now.value, 'yyyy-MM'))
 const previousMonthId = computed(() => format(subMonths(new Date(`${selectedMonthId.value}-01T00:00:00`), 1), 'yyyy-MM'))
 const previousMonthLabel = computed(() => format(subMonths(new Date(`${selectedMonthId.value}-01T00:00:00`), 1), 'MMM'))
 
-// Auto-disable "Carry overspend" when "Rollover envelopes" is turned off
-watch(rolloverEnabled, (newValue) => {
-  if (!newValue && rolloverNegativeEnabled.value) {
-    rolloverNegativeEnabled.value = false
-  }
-})
-
 const month = computed(() => budgetStore.getOrCreateMonth(selectedMonthId.value))
-
-const chronologicalMonthIds = computed(() => {
-  return [...monthIds.value].reverse()
-})
 
 const plannedIncomeTotal = computed(() => {
   return month.value.income.reduce((sum, line) => sum + (line.amount || 0), 0)
@@ -205,10 +189,6 @@ const plannedNet = computed(() => {
 const resolveCategoryKey = (value: string): string => {
   const key = value.trim().toLowerCase()
   return key || 'uncategorized'
-}
-
-const calculateCarryOut = (variance: number, allowNegative: boolean): number => {
-  return allowNegative ? variance : (variance > 0 ? variance : 0)
 }
 
 const extractTransactions = (entry: FinanceEntry | null): Transaction[] => {
@@ -342,59 +322,6 @@ const buildActualByCategoryForMonth = (monthId: string) => {
   return buckets
 }
 
-const carryInByMonthId = computed(() => {
-  const result = new Map<string, Map<string, number>>()
-
-  if (!rolloverEnabled.value) {
-    return result
-  }
-
-  // Only compute months up to and including the selected month to avoid
-  // recalculating future months that aren't visible.
-  const selectedIndex = chronologicalMonthIds.value.indexOf(selectedMonthId.value)
-  if (selectedIndex === -1) {
-    return result
-  }
-
-  const monthsToProcess = chronologicalMonthIds.value.slice(0, selectedIndex + 1)
-  const allowNegative = rolloverNegativeEnabled.value
-
-  let previousCarryOut = new Map<string, number>()
-
-  for (const monthId of monthsToProcess) {
-    result.set(monthId, new Map(previousCarryOut))
-
-    const plannedBase = buildPlannedBaseByCategoryForMonth(monthId)
-    const actual = buildActualByCategoryForMonth(monthId)
-
-    const keys = new Set<string>()
-    for (const key of plannedBase.keys()) keys.add(key)
-    for (const key of actual.keys()) keys.add(key)
-    for (const key of previousCarryOut.keys()) keys.add(key)
-
-    const carryOut = new Map<string, number>()
-
-    for (const key of keys) {
-      const available = (plannedBase.get(key) ?? 0) + (previousCarryOut.get(key) ?? 0)
-      const spent = actual.get(key) ?? 0
-      const variance = available - spent
-      const out = calculateCarryOut(variance, allowNegative)
-
-      if (out !== 0) {
-        carryOut.set(key, out)
-      }
-    }
-
-    previousCarryOut = carryOut
-  }
-
-  return result
-})
-
-const carryInForSelectedMonth = computed(() => {
-  return carryInByMonthId.value.get(selectedMonthId.value) ?? new Map<string, number>()
-})
-
 const previousMonthActualByCategory = computed(() => {
   return buildActualByCategoryForMonth(previousMonthId.value)
 })
@@ -404,21 +331,13 @@ const budgetVsActual = computed<CategorySummary[]>(() => {
 
   for (const key of plannedByCategoryBase.value.keys()) keys.add(key)
   for (const key of actualByCategoryMap.value.keys()) keys.add(key)
-  for (const key of carryInForSelectedMonth.value.keys()) keys.add(key)
   for (const key of previousMonthActualByCategory.value.keys()) keys.add(key)
-
-  const allowNegative = rolloverNegativeEnabled.value
 
   return Array.from(keys)
     .map((key) => {
       const planned = plannedByCategoryBase.value.get(key) ?? 0
-      const carryIn = rolloverEnabled.value ? (carryInForSelectedMonth.value.get(key) ?? 0) : 0
-      const available = planned + carryIn
       const actual = actualByCategoryMap.value.get(key) ?? 0
-      const variance = available - actual
-      const carryOut = rolloverEnabled.value
-        ? calculateCarryOut(variance, allowNegative)
-        : 0
+      const variance = planned - actual
 
       const previousMonth = previousMonthActualByCategory.value.get(key) ?? 0
       const momChange = actual - previousMonth
@@ -433,40 +352,14 @@ const budgetVsActual = computed<CategorySummary[]>(() => {
       return {
         category: key,
         planned,
-        carryIn,
-        available,
         actual,
         variance,
-        carryOut,
         previousMonth,
         momChange,
         momChangePercent
       }
     })
     .sort((a, b) => Math.abs(b.variance) - Math.abs(a.variance))
-})
-
-const carryInTotal = computed(() => {
-  if (!rolloverEnabled.value) return 0
-
-  let total = 0
-  for (const value of carryInForSelectedMonth.value.values()) {
-    total += value
-  }
-
-  return total
-})
-
-const carryOutTotal = computed(() => {
-  if (!rolloverEnabled.value) return 0
-
-  return budgetVsActual.value.reduce((sum, row) => sum + row.carryOut, 0)
-})
-
-const carryDeltaTotal = computed(() => {
-  if (!rolloverEnabled.value) return 0
-
-  return carryOutTotal.value - carryInTotal.value
 })
 
 const savingsOverrideModel = computed({
@@ -482,33 +375,7 @@ const savingsOverrideModel = computed({
       description="Plan income, savings, and spending per month, then compare against imported transactions."
       variant="naked"
       class="mb-2"
-    >
-      <div class="flex flex-wrap items-center justify-between gap-4 w-full">
-        <div class="flex items-center gap-4 flex-wrap">
-          <div class="flex items-center gap-3">
-            <USwitch v-model="rolloverEnabled" />
-            <span class="text-sm text-muted">
-              Rollover envelopes
-            </span>
-          </div>
-
-          <div class="flex items-center gap-3">
-            <USwitch v-model="rolloverNegativeEnabled" :disabled="!rolloverEnabled" />
-            <span class="text-sm text-muted">
-              Carry overspend
-            </span>
-          </div>
-        </div>
-
-        <div v-if="rolloverEnabled" class="text-sm text-dimmed">
-          Carryover from last month: {{ formatCurrency(carryInTotal) }}
-          <span class="text-muted">·</span>
-          Change this month: {{ formatCurrency(carryDeltaTotal) }}
-          <span class="text-muted">·</span>
-          Carryover to next month: {{ formatCurrency(carryOutTotal) }}
-        </div>
-      </div>
-    </UPageCard>
+    />
 
     <UPageCard variant="subtle">
       <div class="flex flex-col gap-4">
@@ -780,13 +647,7 @@ const savingsOverrideModel = computed({
             </div>
 
             <div class="w-24 text-right text-dimmed">
-              <template v-if="rolloverEnabled && row.carryIn > 0">
-                <span class="text-muted">{{ formatCurrency(row.planned) }}</span>
-                <span class="text-xs text-muted"> +{{ formatCurrency(row.carryIn) }}</span>
-              </template>
-              <template v-else>
-                {{ formatCurrency(row.planned) }}
-              </template>
+              {{ formatCurrency(row.planned) }}
             </div>
 
             <div class="w-24 text-right text-highlighted font-medium">
@@ -798,9 +659,6 @@ const savingsOverrideModel = computed({
               :class="row.variance >= 0 ? 'text-success' : 'text-error'"
             >
               {{ row.variance >= 0 ? '+' : '' }}{{ formatCurrency(row.variance) }}
-              <span v-if="rolloverEnabled && row.carryOut !== 0" class="text-xs text-muted">
-                → {{ formatCurrency(row.carryOut) }}
-              </span>
             </div>
 
             <div class="w-24 text-right text-dimmed">
