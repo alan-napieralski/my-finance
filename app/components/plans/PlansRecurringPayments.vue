@@ -24,7 +24,7 @@ const categoryItems = computed(() => {
 
 const normalizeCategory = (value: string | undefined): string => {
   const key = (value ?? '').trim().toLowerCase()
-  return categoryKeys.includes(key) ? key : 'uncategorized'
+  return categoryKeys.includes(key) ? key : 'other'
 }
 </script>
 
