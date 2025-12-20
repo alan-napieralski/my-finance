@@ -1,31 +1,13 @@
 <script setup lang="ts">
-import { h, resolveComponent } from 'vue'
+import { h } from 'vue'
 import type { TableColumn } from '@nuxt/ui'
-import type { Period, Range } from '~/types'
+import type { Period, Range, FinanceEntry, TransactionRow, SortField, SortDirection } from '~/types'
 import { parseTransactionDate } from '~/utils/dateParser'
 
 const props = defineProps<{
   period: Period
   range: Range
 }>()
-
-type FinanceEntry = {
-  id: string
-  timestamp: string
-  data: Record<string, unknown>
-}
-
-type TransactionRow = {
-  id: string
-  date: string
-  description: string
-  category?: string
-  amount: number
-  balance?: number
-}
-
-type SortField = 'date' | 'amount' | 'balance'
-type SortDirection = 'asc' | 'desc'
 
 const searchQuery = ref('')
 const selectedCategories = ref<string[]>([])
@@ -38,10 +20,10 @@ const extractTransactions = (entry: FinanceEntry | null): TransactionRow[] => {
   }
 
   const payload = entry.data
-  const source = Array.isArray(payload.transactions)
-    ? payload.transactions
-    : Array.isArray(payload)
-      ? payload
+  const source = Array.isArray(payload)
+    ? payload
+    : 'transactions' in payload && Array.isArray(payload.transactions)
+      ? payload.transactions
       : []
 
   return source
@@ -131,8 +113,16 @@ const filteredAndSortedData = computed(() => {
       aValue = a.amount
       bValue = b.amount
     } else {
-      aValue = a.balance ?? 0
-      bValue = b.balance ?? 0
+      // For balance sorting: items without balance go to the end
+      const aHasBalance = a.balance != null
+      const bHasBalance = b.balance != null
+
+      if (!aHasBalance && !bHasBalance) return 0
+      if (!aHasBalance) return 1
+      if (!bHasBalance) return -1
+
+      aValue = a.balance!
+      bValue = b.balance!
     }
 
     return sortDirection.value === 'asc' ? aValue - bValue : bValue - aValue
@@ -150,24 +140,12 @@ const toggleSort = (field: SortField) => {
   }
 }
 
+const createSortableHeader = useSortableHeader(sortField, sortDirection, toggleSort)
+
 const columns: TableColumn<TransactionRow>[] = [
   {
     accessorKey: 'date',
-    header: () => {
-      const UIcon = resolveComponent('UIcon')
-      return h('button', {
-        class: 'flex items-center gap-1.5 hover:bg-primary/10 hover:text-primary transition-all cursor-pointer px-2 py-1 -mx-2 -my-1 rounded',
-        onClick: () => toggleSort('date')
-      }, [
-        'Date',
-        h(UIcon, {
-          name: sortField.value === 'date'
-            ? (sortDirection.value === 'asc' ? 'i-lucide-arrow-up' : 'i-lucide-arrow-down')
-            : 'i-lucide-arrow-up-down',
-          class: sortField.value === 'date' ? 'size-4 text-primary' : 'size-4'
-        })
-      ])
-    },
+    header: () => createSortableHeader('date', 'Date'),
     cell: ({ row }) => {
       return new Date(row.getValue('date') as string).toLocaleString('en-GB', {
         day: '2-digit',
@@ -189,21 +167,7 @@ const columns: TableColumn<TransactionRow>[] = [
   },
   {
     accessorKey: 'amount',
-    header: () => {
-      const UIcon = resolveComponent('UIcon')
-      return h('button', {
-        class: 'flex items-center gap-1.5 hover:bg-primary/10 hover:text-primary transition-all cursor-pointer ml-auto px-2 py-1 -mx-2 -my-1 rounded',
-        onClick: () => toggleSort('amount')
-      }, [
-        'Amount',
-        h(UIcon, {
-          name: sortField.value === 'amount'
-            ? (sortDirection.value === 'asc' ? 'i-lucide-arrow-up' : 'i-lucide-arrow-down')
-            : 'i-lucide-arrow-up-down',
-          class: sortField.value === 'amount' ? 'size-4 text-primary' : 'size-4'
-        })
-      ])
-    },
+    header: () => createSortableHeader('amount', 'Amount', true),
     cell: ({ row }) => {
       const amount = Number(row.getValue('amount'))
 
@@ -217,21 +181,7 @@ const columns: TableColumn<TransactionRow>[] = [
   },
   {
     accessorKey: 'balance',
-    header: () => {
-      const UIcon = resolveComponent('UIcon')
-      return h('button', {
-        class: 'flex items-center gap-1.5 hover:bg-primary/10 hover:text-primary transition-all cursor-pointer ml-auto px-2 py-1 -mx-2 -my-1 rounded',
-        onClick: () => toggleSort('balance')
-      }, [
-        'Balance',
-        h(UIcon, {
-          name: sortField.value === 'balance'
-            ? (sortDirection.value === 'asc' ? 'i-lucide-arrow-up' : 'i-lucide-arrow-down')
-            : 'i-lucide-arrow-up-down',
-          class: sortField.value === 'balance' ? 'size-4 text-primary' : 'size-4'
-        })
-      ])
-    },
+    header: () => createSortableHeader('balance', 'Balance', true),
     cell: ({ row }) => {
       const balance = row.getValue('balance')
       if (balance == null || balance === '') {
