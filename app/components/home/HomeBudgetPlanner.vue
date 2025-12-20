@@ -61,8 +61,7 @@ const subcategoryToMainCategory: Record<string, MainCategory> = {
   'other': 'wants',
   'uncategorized': 'wants',
   // Savings
-  'savings': 'savings',
-  'transfers': 'savings'
+  'savings': 'savings'
 }
 
 const getMainCategory = (subcategory: string): MainCategory => {
@@ -571,7 +570,7 @@ const savingsOverrideModel = computed({
             <div class="flex-1">
               Subcategory
             </div>
-            <div class="w-16 text-right">
+            <div class="w-20 text-right">
               Type
             </div>
             <div class="w-24 text-right">
@@ -592,11 +591,11 @@ const savingsOverrideModel = computed({
               {{ row.subcategory }}
             </div>
 
-            <div class="w-16 text-right">
+            <div class="w-20 text-right">
               <UBadge
                 :color="row.mainCategory === 'needs' ? 'info' : row.mainCategory === 'wants' ? 'warning' : 'success'"
                 variant="subtle"
-                size="xs"
+                size="md"
               >
                 {{ row.mainCategory }}
               </UBadge>

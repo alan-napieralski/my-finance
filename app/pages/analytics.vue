@@ -5,10 +5,10 @@ import type { Period, Range } from '~/types'
 const { isNotificationsSlideoverOpen } = useDashboard()
 
 const range = shallowRef<Range>({
-  start: sub(new Date(), { days: 14 }),
+  start: sub(new Date(), { days: 365 }),
   end: new Date()
 })
-const period = ref<Period>('daily')
+const period = ref<Period>('weekly')
 </script>
 
 <template>
