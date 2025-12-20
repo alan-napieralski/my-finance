@@ -89,11 +89,11 @@ export const useBudgetStore = defineStore('budget', () => {
 
   function removeIncomeLine(monthId: string, id: string) {
     const month = getOrCreateMonth(monthId)
-    month.income = month.income.filter(line => line.id !== id)
 
-    if (!month.income.length) {
-      month.income.push({ id: crypto.randomUUID(), name: '', amount: 0 })
-    }
+    // Prevent removing the first income line (Salary)
+    if (month.income[0]?.id === id) return
+
+    month.income = month.income.filter(line => line.id !== id)
   }
 
   function addBudgetItem(monthId: string) {

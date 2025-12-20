@@ -440,13 +440,32 @@ const savingsOverrideModel = computed({
             </template>
 
             <div class="flex flex-col gap-3">
+              <!-- Fixed Salary row -->
+              <div class="flex flex-wrap items-end gap-3">
+                <UFormField name="income-salary-name" label="Name" class="flex-1 min-w-[10rem]">
+                  <UInput model-value="Salary" disabled />
+                </UFormField>
+
+                <UFormField name="income-salary-amount" label="Amount" class="w-full sm:w-40">
+                  <UInput
+                    :model-value="month.income[0]?.amount ?? 0"
+                    type="number"
+                    step="10"
+                    @update:model-value="budgetStore.updateIncomeLine(selectedMonthId, month.income[0]?.id, { amount: $event })"
+                  />
+                </UFormField>
+
+                <div class="w-8" />
+              </div>
+
+              <!-- Additional income lines -->
               <div
-                v-for="line in month.income"
+                v-for="line in month.income.slice(1)"
                 :key="line.id"
                 class="flex flex-wrap items-end gap-3"
               >
                 <UFormField :name="`income-name-${line.id}`" label="Name" class="flex-1 min-w-[10rem]">
-                  <UInput v-model="line.name" placeholder="Salary, bonus, etc." />
+                  <UInput v-model="line.name" placeholder="Bonus, side income, etc." />
                 </UFormField>
 
                 <UFormField :name="`income-amount-${line.id}`" label="Amount" class="w-full sm:w-40">
