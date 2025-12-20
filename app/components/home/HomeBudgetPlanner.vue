@@ -6,26 +6,7 @@ import { usePlansStore } from '~/stores/plans'
 import { useBudgetStore } from '~/stores/budget'
 import { parseTransactionDate } from '~/utils/dateParser'
 import { formatCurrency } from '~/utils/currency'
-
-type FinanceTransactionPayload = {
-  date: string
-  amount: string | number
-  category?: string
-  description?: string
-}
-
-type FinanceEntry = {
-  id: string
-  timestamp: string
-  data: { transactions?: FinanceTransactionPayload[] } | FinanceTransactionPayload[]
-}
-
-type Transaction = {
-  date: Date
-  amount: number
-  category: string
-  description: string
-}
+import type { FinanceEntry, Transaction } from '~/types'
 
 type MainCategory = 'wants' | 'needs' | 'savings'
 
