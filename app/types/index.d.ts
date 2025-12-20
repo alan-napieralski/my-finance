@@ -58,10 +58,33 @@ export interface GeneralSavings {
 export interface WantPlan {
   id: string
   name: string
+
+  /**
+   * Manual fallback amount (used if target/months are not filled in).
+   */
   monthlyAmount: number
+
   targetAmount?: number
+  /**
+   * Legacy field; kept for backwards compatibility/migration.
+   */
   targetDate?: string
+
+  monthsToTarget?: number
+  /**
+   * Whether you’ve invested into this want yet (simple yes/no flag).
+   */
+  invested?: boolean
+
   notes?: string
+}
+
+export type WantOverride = {
+  disabled?: boolean
+  /**
+   * Optional per-month override; when absent, the default want monthly is used.
+   */
+  amountOverride?: number
 }
 
 export interface DebtPlan {
@@ -82,6 +105,25 @@ export interface RecurringPayment {
   notes?: string
 }
 
+export type MainCategory = 'wants' | 'needs' | 'savings'
+
+export type SubcategorySummary = {
+  subcategory: string
+  mainCategory: MainCategory
+  actual: number
+  previousMonth: number
+  momChange: number
+  momChangePercent: number | null
+}
+
+export type MainCategorySummary = {
+  mainCategory: MainCategory
+  actual: number
+  previousMonth: number
+  momChange: number
+  momChangePercent: number | null
+}
+
 export interface IncomeLine {
   id: string
   name: string
@@ -92,6 +134,11 @@ export interface BudgetMonth {
   monthId: string // YYYY-MM
   income: IncomeLine[]
   plannedSavingsOverride?: number
+
+  /**
+   * Per-month controls for wants (disable and/or amount override).
+   */
+  wantOverrides?: Record<string, WantOverride>
 }
 
 // Finance API types
