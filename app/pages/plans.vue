@@ -7,7 +7,7 @@ import { formatCurrency } from '~/utils/currency'
 const plansStore = usePlansStore()
 
 const { savings, wants, debts, totalSavingsPerMonth, totalWantsPerMonth, totalDebtPaymentsPerMonth } = storeToRefs(plansStore)
-const { setGeneralSavings, addWant, removeWant, addDebt, removeDebt } = plansStore
+const { setGeneralSavings, addWant, removeWant, addDebt, removeDebt, getWantMonthlyAmount } = plansStore
 
 const items: TabsItem[] = [{
   label: 'Savings',
@@ -138,16 +138,11 @@ const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
                 </UFormField>
 
                 <UFormField
-                  :name="`monthly-${want.id}`"
-                  label="Monthly amount"
+                  :name="`invested-${want.id}`"
+                  label="Invested"
                   class="w-full sm:w-40"
                 >
-                  <UInput
-                    v-model.number="want.monthlyAmount"
-                    type="number"
-                    min="0"
-                    step="10"
-                  />
+                  <USwitch v-model="want.invested" />
                 </UFormField>
 
                 <UButton
@@ -174,15 +169,42 @@ const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
                 </UFormField>
 
                 <UFormField
-                  :name="`targetDate-${want.id}`"
-                  label="Target date"
+                  :name="`monthsToTarget-${want.id}`"
+                  label="Months"
+                  description="How many months you want to take to reach the target."
                 >
                   <UInput
-                    v-model="want.targetDate"
-                    type="date"
+                    v-model.number="want.monthsToTarget"
+                    type="number"
+                    min="1"
+                    step="1"
                     placeholder="Optional"
                   />
                 </UFormField>
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <UFormField
+                  :name="`manualMonthly-${want.id}`"
+                  label="Monthly amount (manual)"
+                  description="If set, this is used instead of the calculated amount. Set to 0 to use the calculation."
+                >
+                  <UInput
+                    v-model.number="want.monthlyAmount"
+                    type="number"
+                    min="0"
+                    step="10"
+                  />
+                </UFormField>
+
+                <div class="flex flex-col justify-end">
+                  <p class="text-xs text-muted uppercase mb-1.5">
+                    Monthly amount (calculated)
+                  </p>
+                  <p class="text-lg font-semibold text-highlighted">
+                    {{ formatCurrency(getWantMonthlyAmount({ ...want, monthlyAmount: 0 })) }}
+                  </p>
+                </div>
               </div>
 
               <UFormField
