@@ -21,13 +21,6 @@ const links = [[{
     open.value = false
   }
 }, {
-  label: 'Categories',
-  icon: 'i-lucide-pie-chart',
-  to: '/categories',
-  onSelect: () => {
-    open.value = false
-  }
-}, {
   label: 'Plans',
   icon: 'i-lucide-target',
   to: '/plans',
