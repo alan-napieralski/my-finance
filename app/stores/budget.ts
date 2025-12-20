@@ -88,9 +88,10 @@ export const useBudgetStore = defineStore('budget', () => {
 
   function removeIncomeLine(monthId: string, id: string) {
     const month = getOrCreateMonth(monthId)
+    const index = month.income.findIndex(line => line.id === id)
 
-    // Prevent removing the first income line (Salary)
-    if (month.income[0]?.id === id) return
+    // Prevent removing the first income line (Salary) and ignore unknown ids.
+    if (index <= 0) return
 
     month.income = month.income.filter(line => line.id !== id)
   }
