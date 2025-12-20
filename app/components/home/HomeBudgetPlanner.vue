@@ -75,71 +75,6 @@ onUnmounted(() => {
   }
 })
 
-const defaultCategoryOptions = [
-  'Bills',
-  'Subscriptions',
-  'Groceries',
-  'Transport',
-  'Eating out',
-  'Sport and hobbies',
-  'Wants',
-  'Needs',
-  'Savings',
-  'Transfers',
-  'Income',
-  'Other',
-  'Uncategorized'
-]
-
-const categoryOptions = computed(() => {
-  const seen = new Map<string, string>()
-
-  const add = (value: string | undefined) => {
-    if (!value) return
-
-    const trimmed = value.trim()
-    if (!trimmed) return
-
-    const key = trimmed.toLowerCase()
-    if (!seen.has(key)) {
-      seen.set(key, trimmed)
-    }
-  }
-
-  // Seed with defaults to keep a stable, friendly ordering.
-  for (const option of defaultCategoryOptions) {
-    add(option)
-  }
-
-  // Include categories already in your planned items.
-  for (const item of month.value.items) {
-    add(item.category)
-  }
-
-  // Include categories from recurring payments.
-  for (const payment of recurringPayments.value) {
-    add(payment.category)
-  }
-
-  // Include categories seen in imported transactions.
-  for (const tx of allTransactions.value) {
-    add(tx.category)
-  }
-
-  const defaults = defaultCategoryOptions
-    .map(option => option.toLowerCase())
-
-  const dynamic = Array.from(seen.entries())
-    .filter(([key]) => !defaults.includes(key))
-    .map(([, label]) => label)
-    .sort((a, b) => a.localeCompare(b))
-
-  const orderedDefaults = defaultCategoryOptions
-    .map(option => seen.get(option.toLowerCase()) ?? option)
-
-  return [...orderedDefaults, ...dynamic]
-})
-
 const monthTabItems = computed<TabsItem[]>(() => {
   return monthIds.value.map(monthId => ({
     label: format(new Date(`${monthId}-01T00:00:00`), 'MMM yyyy'),
@@ -158,9 +93,7 @@ const plannedIncomeTotal = computed(() => {
   return month.value.income.reduce((sum, line) => sum + (line.amount || 0), 0)
 })
 
-const plannedItemsTotal = computed(() => {
-  return month.value.items.reduce((sum, item) => sum + (item.plannedAmount || 0), 0)
-})
+const plannedItemsTotal = computed(() => 0)
 
 const plannedSavings = computed(() => {
   const override = month.value.plannedSavingsOverride
@@ -275,18 +208,8 @@ const actualByCategoryMap = computed(() => {
   return buckets
 })
 
-function buildPlannedBaseByCategoryForMonth(monthId: string) {
+function buildPlannedBaseByCategoryForMonth(_monthId: string) {
   const buckets = new Map<string, number>()
-  const month = budgetStore.getOrCreateMonth(monthId)
-
-  for (const item of month.items) {
-    const planned = item.plannedAmount || 0
-    if (!planned) continue
-
-    const key = resolveCategoryKey(item.category)
-    const previous = buckets.get(key) ?? 0
-    buckets.set(key, previous + planned)
-  }
 
   for (const payment of recurringPayments.value) {
     const planned = payment.monthlyAmount || 0
@@ -451,7 +374,7 @@ const savingsOverrideModel = computed({
                     :model-value="month.income[0]?.amount ?? 0"
                     type="number"
                     step="10"
-                    @update:model-value="budgetStore.updateIncomeLine(selectedMonthId, month.income[0]?.id, { amount: $event })"
+                    @update:model-value="budgetStore.updateIncomeLine(selectedMonthId, month.income[0]!.id, { amount: $event })"
                   />
                 </UFormField>
 
@@ -541,77 +464,6 @@ const savingsOverrideModel = computed({
             </div>
           </UCard>
         </div>
-      </div>
-    </UPageCard>
-
-    <UPageCard
-      variant="subtle"
-      :ui="{ container: 'p-0 sm:p-0 gap-y-0', wrapper: 'items-stretch', header: 'p-4 mb-0 border-b border-default' }"
-    >
-      <template #header>
-        <div class="flex items-center justify-between gap-4 flex-wrap">
-          <h2 class="text-sm font-medium text-highlighted">
-            Planned spending items
-          </h2>
-          <UButton
-            color="neutral"
-            icon="i-lucide-plus"
-            label="Add item"
-            size="sm"
-            class="w-fit"
-            @click="budgetStore.addBudgetItem(selectedMonthId)"
-          />
-        </div>
-      </template>
-
-      <div v-if="month.items.length" class="divide-y divide-default">
-        <div
-          v-for="item in month.items"
-          :key="item.id"
-          class="flex flex-col gap-3 px-4 py-3 sm:px-6 sm:py-4"
-        >
-          <div class="flex flex-wrap items-end justify-between gap-3">
-            <UFormField :name="`item-purchased-${item.id}`" label="Bought" class="w-full sm:w-28">
-              <UCheckbox v-model="item.purchased" />
-            </UFormField>
-
-            <UFormField :name="`item-name-${item.id}`" label="Name" class="flex-1 min-w-[10rem]">
-              <UInput v-model="item.name" placeholder="New shoes, new laptop, etc." />
-            </UFormField>
-
-            <UFormField :name="`item-category-${item.id}`" label="Category" class="w-full sm:w-48">
-              <USelectMenu
-                v-model="item.category"
-                :items="categoryOptions"
-                placeholder="Select"
-                :search-input="{ placeholder: 'Search categories...' }"
-                class="w-full"
-              />
-            </UFormField>
-
-            <UFormField :name="`item-planned-${item.id}`" label="Planned" class="w-full sm:w-40">
-              <UInput
-                :model-value="item.plannedAmount"
-                type="number"
-                min="0"
-                step="10"
-                @update:model-value="budgetStore.updateBudgetItem(selectedMonthId, item.id, { plannedAmount: $event })"
-              />
-            </UFormField>
-
-            <UButton
-              color="neutral"
-              variant="ghost"
-              icon="i-lucide-trash-2"
-              class="self-start"
-              @click="budgetStore.removeBudgetItem(selectedMonthId, item.id)"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div v-else class="px-4 py-6 sm:px-6 text-sm text-muted">
-        No planned items yet. Use “Add item” to start building your monthly sheet.
       </div>
     </UPageCard>
 
@@ -709,7 +561,7 @@ const savingsOverrideModel = computed({
       </div>
 
       <div v-else class="text-sm text-muted">
-        Add planned items or import transactions to see category breakdown.
+        Import transactions to see category breakdown.
       </div>
     </UCard>
   </div>

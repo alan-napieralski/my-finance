@@ -96,18 +96,8 @@ export interface IncomeLine {
   amount: number
 }
 
-export interface BudgetItem {
-  id: string
-  name: string
-  category: string
-  plannedAmount: number
-  purchased?: boolean
-  notes?: string
-}
-
 export interface BudgetMonth {
   monthId: string // YYYY-MM
   income: IncomeLine[]
   plannedSavingsOverride?: number
-  items: BudgetItem[]
 }
