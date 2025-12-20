@@ -12,7 +12,13 @@ const { addRecurringPayment, removeRecurringPayment } = plansStore
 const categoryKeys = Object.keys(subcategoryToMainCategory)
 
 const formatCategoryLabel = (key: string): string => {
-  return key ? key.charAt(0).toUpperCase() + key.slice(1) : key
+  if (!key) return key
+
+  return key
+    .split(' ')
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
 }
 
 const categoryItems = computed(() => {
