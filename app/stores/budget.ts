@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 import { defineStore } from 'pinia'
 import { useStorage } from '@vueuse/core'
-import type { BudgetMonth, IncomeLine, WantOverride } from '~/types'
+import type { BudgetMonth, IncomeLine, WantOverride, DebtPaymentStatus } from '~/types'
 
 type BudgetMonthMap = Record<string, BudgetMonth>
 
@@ -142,6 +142,43 @@ export const useBudgetStore = defineStore('budget', () => {
     }
   }
 
+  function setDebtPaymentStatus(monthId: string, debtId: string, paid: boolean) {
+    const month = getOrCreateMonth(monthId)
+    month.debtPayments ||= {}
+
+    const current = month.debtPayments[debtId] ?? {}
+    const next: DebtPaymentStatus = { ...current }
+
+    if (paid) {
+      next.paid = true
+    } else {
+      delete next.paid
+    }
+
+    if (!next.paid) {
+      const { [debtId]: _removed, ...rest } = month.debtPayments
+      month.debtPayments = rest
+    } else {
+      month.debtPayments[debtId] = next
+    }
+
+    if (!Object.keys(month.debtPayments).length) {
+      month.debtPayments = undefined
+    }
+  }
+
+  function clearDebtPaymentStatus(monthId: string, debtId: string) {
+    const month = getOrCreateMonth(monthId)
+    if (!month.debtPayments) return
+
+    const { [debtId]: _removed, ...rest } = month.debtPayments
+    month.debtPayments = rest
+
+    if (!Object.keys(month.debtPayments).length) {
+      month.debtPayments = undefined
+    }
+  }
+
   function clearMonth(monthId: string) {
     validateMonthId(monthId)
     const { [monthId]: _removed, ...rest } = months.value
@@ -161,6 +198,8 @@ export const useBudgetStore = defineStore('budget', () => {
     setPlannedSavingsOverride,
     setWantOverride,
     clearWantOverride,
+    setDebtPaymentStatus,
+    clearDebtPaymentStatus,
     addIncomeLine,
     updateIncomeLine,
     removeIncomeLine,

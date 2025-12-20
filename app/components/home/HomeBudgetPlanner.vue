@@ -15,8 +15,8 @@ const budgetStore = useBudgetStore()
 const {
   savings,
   wants,
+  debts,
   totalSavingsPerMonth,
-  totalDebtPaymentsPerMonth,
   totalRecurringPaymentsPerMonth
 } = storeToRefs(plansStore)
 
@@ -88,10 +88,24 @@ const plannedWantsTotal = computed(() => {
   return wants.value.reduce((sum, want) => sum + resolveWantMonthlyForMonth(want.id), 0)
 })
 
+const resolveDebtMonthlyForMonth = (debtId: string): number => {
+  const debt = debts.value.find(d => d.id === debtId)
+  if (!debt) return 0
+
+  const status = month.value.debtPayments?.[debtId]
+  if (status?.paid) return 0
+
+  return plansStore.getDebtMonthlyPayment(debt)
+}
+
+const plannedDebtPaymentsTotal = computed(() => {
+  return debts.value.reduce((sum, debt) => sum + resolveDebtMonthlyForMonth(debt.id), 0)
+})
+
 const plannedCommitmentsTotal = computed(() => {
   return plannedSavings.value
     + plannedWantsTotal.value
-    + totalDebtPaymentsPerMonth.value
+    + plannedDebtPaymentsTotal.value
     + totalRecurringPaymentsPerMonth.value
 })
 
@@ -434,8 +448,8 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                   <span class="text-highlighted font-medium">{{ formatCurrency(plannedWantsTotal) }}</span>
                 </div>
                 <div class="flex items-center justify-between gap-3">
-                  <span class="text-muted">Debt payments (from Plans)</span>
-                  <span class="text-highlighted font-medium">{{ formatCurrency(totalDebtPaymentsPerMonth) }}</span>
+                  <span class="text-muted">Debt payments (this month)</span>
+                  <span class="text-highlighted font-medium">{{ formatCurrency(plannedDebtPaymentsTotal) }}</span>
                 </div>
                 <div class="flex items-center justify-between gap-3">
                   <span class="text-muted">Recurring (from Plans)</span>

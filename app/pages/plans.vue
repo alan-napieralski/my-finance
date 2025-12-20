@@ -1,13 +1,29 @@
 <script setup lang="ts">
+import { format } from 'date-fns'
 import type { TabsItem } from '@nuxt/ui'
 import { storeToRefs } from 'pinia'
 import { usePlansStore } from '~/stores/plans'
+import { useBudgetStore } from '~/stores/budget'
 import { formatCurrency } from '~/utils/currency'
 
 const plansStore = usePlansStore()
+const budgetStore = useBudgetStore()
 
-const { savings, wants, debts, totalSavingsPerMonth, totalWantsPerMonth, totalDebtPaymentsPerMonth } = storeToRefs(plansStore)
-const { setGeneralSavings, addWant, removeWant, addDebt, removeDebt, getWantMonthlyAmount } = plansStore
+const { savings, wants, debts, totalSavingsPerMonth, totalWantsPerMonth } = storeToRefs(plansStore)
+const { setGeneralSavings, addWant, removeWant, addDebt, removeDebt, getWantMonthlyAmount, getDebtMonthlyPayment } = plansStore
+
+const currentMonthId = format(new Date(), 'yyyy-MM')
+const currentMonth = computed(() => budgetStore.getOrCreateMonth(currentMonthId))
+
+const isDebtPaidThisMonth = (debtId: string): boolean => {
+  return Boolean(currentMonth.value.debtPayments?.[debtId]?.paid)
+}
+
+const totalDebtPaymentsThisMonth = computed(() => {
+  return debts.value.reduce((sum, debt) => {
+    return sum + (isDebtPaidThisMonth(debt.id) ? 0 : getDebtMonthlyPayment(debt))
+  }, 0)
+})
 
 const items: TabsItem[] = [{
   label: 'Savings',
@@ -222,17 +238,17 @@ const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
       <div v-else class="flex flex-col gap-4 sm:gap-6 lg:max-w-3xl">
         <UPageCard
           title="Debt overview"
-          description="Track your debts, payoff deadlines, and how much you choose to pay each month."
+          description="Track your debts and payoff deadlines. Monthly payment is calculated automatically."
           variant="naked"
           class="mb-2"
         >
           <template #footer>
             <div class="flex flex-wrap items-center justify-between gap-4 w-full">
               <div class="text-sm text-muted">
-                Total monthly debt payments
+                Remaining debt payments (this month)
               </div>
               <div class="text-2xl font-semibold text-highlighted">
-                {{ formatCurrency(totalDebtPaymentsPerMonth) }}
+                {{ formatCurrency(totalDebtPaymentsThisMonth) }}
               </div>
             </div>
           </template>
@@ -265,11 +281,11 @@ const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
               :key="debt.id"
               class="flex flex-col gap-3 px-4 py-3 sm:px-6 sm:py-4"
             >
-              <div class="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3">
+              <div class="flex items-start justify-between gap-3">
                 <UFormField
                   :name="`debt-name-${debt.id}`"
                   label="Name"
-                  class="flex-1 w-full sm:w-auto sm:min-w-[10rem]"
+                  class="flex-1 min-w-0"
                 >
                   <UInput
                     v-model="debt.name"
@@ -277,10 +293,19 @@ const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
                   />
                 </UFormField>
 
+                <UButton
+                  color="neutral"
+                  variant="ghost"
+                  icon="i-lucide-trash-2"
+                  class="shrink-0 mt-6"
+                  @click="removeDebt(debt.id)"
+                />
+              </div>
+
+              <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <UFormField
                   :name="`debt-total-${debt.id}`"
                   label="Total debt"
-                  class="w-full sm:w-40"
                 >
                   <UInput
                     v-model.number="debt.totalDebt"
@@ -293,7 +318,6 @@ const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
                 <UFormField
                   :name="`debt-deadline-${debt.id}`"
                   label="Deadline"
-                  class="w-full sm:w-40"
                 >
                   <UInput
                     v-model="debt.deadline"
@@ -303,24 +327,32 @@ const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
 
                 <UFormField
                   :name="`debt-monthly-${debt.id}`"
-                  label="Monthly payment"
-                  class="w-full sm:w-40"
+                  label="Monthly payment (calculated)"
                 >
                   <UInput
-                    v-model.number="debt.monthlyPayment"
-                    type="number"
-                    min="0"
-                    step="50"
+                    :model-value="formatCurrency(getDebtMonthlyPayment(debt))"
+                    disabled
                   />
                 </UFormField>
 
-                <UButton
-                  color="neutral"
-                  variant="ghost"
-                  icon="i-lucide-trash-2"
-                  class="self-start sm:self-center"
-                  @click="removeDebt(debt.id)"
-                />
+                <UFormField
+                  :name="`debt-paid-${debt.id}`"
+                  label="Paid this month"
+                >
+                  <div class="flex items-center justify-between gap-3">
+                    <USwitch
+                      :model-value="isDebtPaidThisMonth(debt.id)"
+                      @update:model-value="value => budgetStore.setDebtPaymentStatus(currentMonthId, debt.id, Boolean(value))"
+                    />
+                    <UButton
+                      color="neutral"
+                      variant="ghost"
+                      icon="i-lucide-rotate-ccw"
+                      class="shrink-0"
+                      @click="budgetStore.clearDebtPaymentStatus(currentMonthId, debt.id)"
+                    />
+                  </div>
+                </UFormField>
               </div>
 
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">

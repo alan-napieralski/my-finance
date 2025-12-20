@@ -3,6 +3,28 @@ import { defineStore } from 'pinia'
 import { useStorage } from '@vueuse/core'
 import type { GeneralSavings, WantPlan, DebtPlan, RecurringPayment } from '~/types'
 
+const toDateOrNull = (value: string): Date | null => {
+  const match = /^\d{4}-\d{2}-\d{2}$/.exec(value)
+  if (!match) return null
+
+  const date = new Date(`${value}T00:00:00`)
+  return Number.isNaN(date.getTime()) ? null : date
+}
+
+const daysUntil = (deadline: string): number | null => {
+  const date = toDateOrNull(deadline)
+  if (!date) return null
+
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+
+  const end = new Date(date)
+  end.setHours(0, 0, 0, 0)
+
+  const msPerDay = 1000 * 60 * 60 * 24
+  return Math.ceil((end.getTime() - today.getTime()) / msPerDay)
+}
+
 const toNonNegativeNumber = (value: unknown): number => {
   const amount = typeof value === 'string' ? Number.parseFloat(value) : Number(value)
   return Number.isFinite(amount) ? Math.max(0, amount) : 0
@@ -72,8 +94,25 @@ export const usePlansStore = defineStore('plans', () => {
     return wants.value.reduce((sum, want) => sum + getWantMonthlyAmount(want), 0)
   })
 
+  const getDebtMonthlyPayment = (debt: DebtPlan): number => {
+    const totalDebt = toNonNegativeNumber(debt.totalDebt)
+    if (!totalDebt) return 0
+
+    const remainingDays = debt.deadline ? daysUntil(debt.deadline) : null
+
+    if (remainingDays != null) {
+      // Uses the number of days until the deadline to estimate the monthly payment.
+      // Monthly ~= totalDebt * (30 / daysRemaining)
+      const effectiveDays = Math.max(1, remainingDays)
+      return (totalDebt * 30) / effectiveDays
+    }
+
+    // Fallback to legacy/manual value if the deadline isn't parseable.
+    return toNonNegativeNumber(debt.monthlyPayment)
+  }
+
   const totalDebtPaymentsPerMonth = computed(() => {
-    return debts.value.reduce((sum, debt) => sum + (debt.monthlyPayment || 0), 0)
+    return debts.value.reduce((sum, debt) => sum + getDebtMonthlyPayment(debt), 0)
   })
 
   const totalRecurringPaymentsPerMonth = computed(() => {
@@ -113,8 +152,7 @@ export const usePlansStore = defineStore('plans', () => {
       id: crypto.randomUUID(),
       name: '',
       totalDebt: 0,
-      deadline: new Date().toISOString().slice(0, 10),
-      monthlyPayment: 0
+      deadline: new Date().toISOString().slice(0, 10)
     })
   }
 
@@ -160,6 +198,7 @@ export const usePlansStore = defineStore('plans', () => {
     totalRecurringPaymentsPerMonth,
     totalPlannedOutflowPerMonth,
     getWantMonthlyAmount,
+    getDebtMonthlyPayment,
     setGeneralSavings,
     addWant,
     updateWant,

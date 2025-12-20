@@ -88,9 +88,19 @@ export interface DebtPlan {
   name: string
   totalDebt: number
   deadline: string
-  monthlyPayment: number
+
+  /**
+   * Legacy/manual value (kept for backwards compatibility).
+   * The UI now calculates the monthly payment based on total debt and deadline.
+   */
+  monthlyPayment?: number
+
   interestRate?: number
   notes?: string
+}
+
+export type DebtPaymentStatus = {
+  paid?: boolean
 }
 
 export interface RecurringPayment {
@@ -135,6 +145,11 @@ export interface BudgetMonth {
    * Per-month controls for wants (disable and/or amount override).
    */
   wantOverrides?: Record<string, WantOverride>
+
+  /**
+   * Per-month status for debts (e.g., whether you've paid it this month).
+   */
+  debtPayments?: Record<string, DebtPaymentStatus>
 }
 
 // Finance API types
