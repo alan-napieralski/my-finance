@@ -62,13 +62,23 @@ const monthIds = computed(() => {
 })
 
 // Refresh on visibility change to handle overnight sessions
-if (import.meta.client) {
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') {
-      now.value = new Date()
-    }
-  })
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'visible') {
+    now.value = new Date()
+  }
 }
+
+onMounted(() => {
+  if (import.meta.client) {
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+  }
+})
+
+onUnmounted(() => {
+  if (import.meta.client) {
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }
+})
 
 const defaultCategoryOptions = [
   'Bills',
