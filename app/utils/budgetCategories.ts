@@ -23,5 +23,7 @@ export const mainCategories: MainCategory[] = ['needs', 'wants', 'savings']
 
 export const getMainCategory = (subcategory: string): MainCategory => {
   const key = subcategory.toLowerCase()
+
+  // Default unknown categories to 'wants' (discretionary spending) to keep the UI predictable.
   return subcategoryToMainCategory[key] ?? 'wants'
 }
