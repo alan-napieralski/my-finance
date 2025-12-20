@@ -507,7 +507,7 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                           step="10"
                           placeholder="(default)"
                           @update:model-value="(value) => {
-                            const amount = value == null ? null : Number(value)
+                            const amount = value == null || String(value) === '' ? null : Number(value)
                             budgetStore.setWantOverride(selectedMonthId, want.id, { amountOverride: amount !== null && Number.isFinite(amount) ? amount : null })
                           }"
                         />
@@ -580,7 +580,7 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                             placeholder="(default)"
                             class="w-36"
                             @update:model-value="(value) => {
-                              const amount = value == null ? null : Number(value)
+                              const amount = value == null || String(value) === '' ? null : Number(value)
                               budgetStore.setWantOverride(selectedMonthId, want.id, { amountOverride: amount !== null && Number.isFinite(amount) ? amount : null })
                             }"
                           />
