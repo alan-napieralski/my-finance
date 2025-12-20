@@ -319,7 +319,9 @@ const savingsOverrideModel = computed({
 
     <UPageCard variant="subtle">
       <div class="flex flex-col gap-4">
-        <UTabs v-model="selectedMonthId" :items="monthTabItems" class="w-full" />
+        <div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+          <UTabs v-model="selectedMonthId" :items="monthTabItems" class="w-full min-w-max" />
+        </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           <UCard>
@@ -381,8 +383,8 @@ const savingsOverrideModel = computed({
 
             <div class="flex flex-col gap-3">
               <!-- Fixed Salary row -->
-              <div class="flex flex-wrap items-end gap-3">
-                <UFormField name="income-salary-name" label="Name" class="flex-1 min-w-[10rem]">
+              <div class="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-end gap-3">
+                <UFormField name="income-salary-name" label="Name" class="flex-1 w-full sm:w-auto sm:min-w-[10rem]">
                   <UInput model-value="Salary" disabled />
                 </UFormField>
 
@@ -395,16 +397,16 @@ const savingsOverrideModel = computed({
                   />
                 </UFormField>
 
-                <div class="w-8" />
+                <div class="hidden sm:block sm:w-8" />
               </div>
 
               <!-- Additional income lines -->
               <div
                 v-for="line in month.income.slice(1)"
                 :key="line.id"
-                class="flex flex-wrap items-end gap-3"
+                class="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-end gap-3"
               >
-                <UFormField :name="`income-name-${line.id}`" label="Name" class="flex-1 min-w-[10rem]">
+                <UFormField :name="`income-name-${line.id}`" label="Name" class="flex-1 w-full sm:w-auto sm:min-w-[10rem]">
                   <UInput v-model="line.name" placeholder="Bonus, side income, etc." />
                 </UFormField>
 
@@ -421,7 +423,7 @@ const savingsOverrideModel = computed({
                   color="neutral"
                   variant="ghost"
                   icon="i-lucide-trash-2"
-                  class="self-start"
+                  class="self-start sm:self-center"
                   @click="budgetStore.removeIncomeLine(selectedMonthId, line.id)"
                 />
               </div>
@@ -497,9 +499,9 @@ const savingsOverrideModel = computed({
           </h3>
         </template>
 
-        <div class="flex flex-col">
+        <div class="flex flex-col overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <!-- Header row -->
-          <div class="flex items-center gap-3 py-2 border-b border-default text-xs text-muted uppercase">
+          <div class="flex items-center gap-3 py-2 border-b border-default text-xs text-muted uppercase min-w-[400px]">
             <div class="flex-1">
               Category
             </div>
@@ -518,7 +520,7 @@ const savingsOverrideModel = computed({
           <div
             v-for="row in mainCategoryBreakdown"
             :key="row.mainCategory"
-            class="flex items-center gap-3 py-2.5 border-b border-default/50 text-sm"
+            class="flex items-center gap-3 py-2.5 border-b border-default/50 text-sm min-w-[400px]"
           >
             <div class="flex-1 text-highlighted font-medium capitalize">
               {{ row.mainCategory }}
@@ -564,9 +566,9 @@ const savingsOverrideModel = computed({
           </h3>
         </template>
 
-        <div class="flex flex-col">
+        <div class="flex flex-col overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
           <!-- Header row -->
-          <div class="flex items-center gap-3 py-2 border-b border-default text-xs text-muted uppercase">
+          <div class="flex items-center gap-3 py-2 border-b border-default text-xs text-muted uppercase min-w-[500px]">
             <div class="flex-1">
               Subcategory
             </div>
@@ -585,7 +587,7 @@ const savingsOverrideModel = computed({
           <div
             v-for="row in subcategoryBreakdown"
             :key="row.subcategory"
-            class="flex items-center gap-3 py-2 border-b border-default/50 text-sm"
+            class="flex items-center gap-3 py-2 border-b border-default/50 text-sm min-w-[500px]"
           >
             <div class="flex-1 text-muted capitalize truncate">
               {{ row.subcategory }}

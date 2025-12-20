@@ -291,17 +291,23 @@ const columns: TableColumn<TransactionRow>[] = [
     </UCard>
 
     <!-- Table -->
-    <UTable
-      :data="filteredAndSortedData"
-      :columns="columns"
-      class="shrink-0"
-      :ui="{
-        base: 'table-fixed border-separate border-spacing-0',
-        thead: '[&>tr]:bg-elevated/50 [&>tr]:after:content-none',
-        tbody: '[&>tr]:last:[&>td]:border-b-0',
-        th: 'first:rounded-l-lg last:rounded-r-lg border-y border-default first:border-l last:border-r',
-        td: 'border-b border-default'
-      }"
-    />
+    <div class="overflow-x-auto -mx-4 sm:mx-0">
+      <div class="inline-block min-w-full align-middle">
+        <div class="overflow-hidden">
+          <UTable
+            :data="filteredAndSortedData"
+            :columns="columns"
+            class="shrink-0"
+            :ui="{
+              base: 'table-auto sm:table-fixed border-separate border-spacing-0 min-w-full',
+              thead: '[&>tr]:bg-elevated/50 [&>tr]:after:content-none',
+              tbody: '[&>tr]:last:[&>td]:border-b-0',
+              th: 'first:rounded-l-lg last:rounded-r-lg border-y border-default first:border-l last:border-r whitespace-nowrap',
+              td: 'border-b border-default'
+            }"
+          />
+        </div>
+      </div>
+    </div>
   </div>
 </template>

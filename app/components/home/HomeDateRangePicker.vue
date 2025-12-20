@@ -6,6 +6,8 @@ const df = new DateFormatter('en-US', {
   dateStyle: 'medium'
 })
 
+const isSmallScreen = useMediaQuery('(max-width: 640px)')
+
 const selected = defineModel<Range>({ required: true })
 
 const ranges = [
@@ -123,7 +125,7 @@ const selectRange = (range: { days?: number, months?: number, years?: number }) 
         <UCalendar
           v-model="calendarRange"
           class="p-2"
-          :number-of-months="2"
+          :number-of-months="isSmallScreen ? 1 : 2"
           range
         />
       </div>

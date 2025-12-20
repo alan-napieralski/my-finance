@@ -89,7 +89,7 @@ onMounted(async () => {
       collapsible
       resizable
       class="bg-elevated/25"
-      :ui="{ footer: 'lg:border-t lg:border-default' }"
+      :ui="{ footer: 'lg:border-t lg:border-default', overlay: 'lg:hidden' }"
     >
       <template #default="{ collapsed }">
         <UDashboardSearchButton :collapsed="collapsed" class="bg-transparent ring-default" />

@@ -56,11 +56,11 @@ const { addRecurringPayment, removeRecurringPayment } = plansStore
           :key="payment.id"
           class="flex flex-col gap-3 px-4 py-3 sm:px-6 sm:py-4"
         >
-          <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3">
             <UFormField
               :name="`recurring-name-${payment.id}`"
               label="Name"
-              class="flex-1 min-w-[10rem]"
+              class="flex-1 w-full sm:w-auto sm:min-w-[10rem]"
             >
               <UInput
                 :model-value="payment.name"
@@ -99,7 +99,7 @@ const { addRecurringPayment, removeRecurringPayment } = plansStore
               color="neutral"
               variant="ghost"
               icon="i-lucide-trash-2"
-              class="self-start"
+              class="self-start sm:self-center"
               @click="removeRecurringPayment(payment.id)"
             />
           </div>

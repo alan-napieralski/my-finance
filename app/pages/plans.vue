@@ -40,7 +40,9 @@ const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
       </UDashboardNavbar>
 
       <UDashboardToolbar>
-        <UTabs v-model="current" :items="items" class="w-full max-w-md" />
+        <div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 w-full">
+          <UTabs v-model="current" :items="items" class="max-w-md min-w-max" />
+        </div>
       </UDashboardToolbar>
     </template>
 
@@ -131,11 +133,11 @@ const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
               :key="want.id"
               class="flex flex-col gap-3 px-4 py-3 sm:px-6 sm:py-4"
             >
-              <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3">
                 <UFormField
                   :name="`name-${want.id}`"
                   label="Name"
-                  class="flex-1 min-w-[10rem]"
+                  class="flex-1 w-full sm:w-auto sm:min-w-[10rem]"
                 >
                   <UInput
                     v-model="want.name"
@@ -160,7 +162,7 @@ const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
                   color="neutral"
                   variant="ghost"
                   icon="i-lucide-trash-2"
-                  class="self-start"
+                  class="self-start sm:self-center"
                   @click="removeWant(want.id)"
                 />
               </div>
@@ -259,11 +261,11 @@ const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
               :key="debt.id"
               class="flex flex-col gap-3 px-4 py-3 sm:px-6 sm:py-4"
             >
-              <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3">
                 <UFormField
                   :name="`debt-name-${debt.id}`"
                   label="Name"
-                  class="flex-1 min-w-[10rem]"
+                  class="flex-1 w-full sm:w-auto sm:min-w-[10rem]"
                 >
                   <UInput
                     v-model="debt.name"
@@ -312,7 +314,7 @@ const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
                   color="neutral"
                   variant="ghost"
                   icon="i-lucide-trash-2"
-                  class="self-start"
+                  class="self-start sm:self-center"
                   @click="removeDebt(debt.id)"
                 />
               </div>
