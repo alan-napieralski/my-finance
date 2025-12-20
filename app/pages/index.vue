@@ -1,7 +1,7 @@
 <template>
   <UDashboardPanel id="home">
     <template #header>
-      <UDashboardNavbar title="Home" />
+      <UDashboardNavbar title="Home" :ui="{ toggle: 'hidden' }" />
     </template>
 
     <template #body>

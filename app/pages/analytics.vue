@@ -12,7 +12,7 @@ const period = ref<Period>('weekly')
 <template>
   <UDashboardPanel id="analytics">
     <template #header>
-      <UDashboardNavbar title="Analytics" />
+      <UDashboardNavbar title="Analytics" :ui="{ toggle: 'hidden' }" />
 
       <UDashboardToolbar>
         <template #left>
