@@ -306,6 +306,32 @@ const savingsOverrideModel = computed({
   get: () => month.value.plannedSavingsOverride ?? null,
   set: (value: number | null) => budgetStore.setPlannedSavingsOverride(selectedMonthId.value, value)
 })
+
+type BudgetStatCard = {
+  key: string
+  label: string
+  value: string
+  valueClass?: string
+}
+
+const budgetStats = computed<BudgetStatCard[]>(() => [{
+  key: 'income',
+  label: 'Income',
+  value: formatCurrency(plannedIncomeTotal.value)
+}, {
+  key: 'actual-income',
+  label: 'Actual income',
+  value: formatCurrency(actualIncome.value)
+}, {
+  key: 'spent',
+  label: 'Spent',
+  value: formatCurrency(actualSpent.value)
+}, {
+  key: 'net',
+  label: 'Net',
+  value: formatCurrency(actualNet.value),
+  valueClass: actualNet.value >= 0 ? 'text-success' : 'text-error'
+}])
 </script>
 
 <template>
@@ -319,54 +345,30 @@ const savingsOverrideModel = computed({
 
     <UPageCard variant="subtle">
       <div class="flex flex-col gap-4">
-        <!-- Month tabs - scrollable on mobile -->
-        <div class="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
+        <!-- Month selector - dropdown on smaller screens, tabs on larger screens -->
+        <div class="xl:hidden">
+          <USelect v-model="selectedMonthId" :items="monthTabItems" class="w-full" />
+        </div>
+        <div class="hidden xl:block overflow-x-auto">
           <UTabs v-model="selectedMonthId" :items="monthTabItems" class="w-full min-w-max" />
         </div>
 
-        <!-- Stats cards - fluid grid -->
-        <div class="grid grid-cols-2 gap-3">
-          <UCard>
+        <!-- Stats cards - shrink on phones, bento on larger screens -->
+        <div class="grid grid-cols-1 min-[360px]:grid-cols-2 xl:grid-cols-4 gap-2 sm:gap-3">
+          <UCard v-for="stat in budgetStats" :key="stat.key">
             <p class="text-xs text-muted uppercase mb-1.5">
-              Income
+              {{ stat.label }}
             </p>
-            <p class="text-xl sm:text-2xl font-semibold text-highlighted">
-              {{ formatCurrency(plannedIncomeTotal) }}
-            </p>
-          </UCard>
-          <UCard>
-            <p class="text-xs text-muted uppercase mb-1.5">
-              Actual income
-            </p>
-            <p class="text-xl sm:text-2xl font-semibold text-highlighted">
-              {{ formatCurrency(actualIncome) }}
-            </p>
-          </UCard>
-          <UCard>
-            <p class="text-xs text-muted uppercase mb-1.5">
-              Spent
-            </p>
-            <p class="text-xl sm:text-2xl font-semibold text-highlighted">
-              {{ formatCurrency(actualSpent) }}
-            </p>
-          </UCard>
-          <UCard>
-            <p class="text-xs text-muted uppercase mb-1.5">
-              Net
-            </p>
-            <p
-              class="text-xl sm:text-2xl font-semibold"
-              :class="actualNet >= 0 ? 'text-success' : 'text-error'"
-            >
-              {{ formatCurrency(actualNet) }}
+            <p :class="['text-lg sm:text-xl xl:text-2xl font-semibold', stat.valueClass ?? 'text-highlighted']">
+              {{ stat.value }}
             </p>
           </UCard>
         </div>
 
         <USeparator />
 
-        <!-- Income & Commitments - stack on mobile -->
-        <div class="flex flex-col gap-4">
+        <!-- Income & Commitments - two columns on larger screens -->
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
           <UCard>
             <template #header>
               <div class="flex items-center justify-between gap-4 flex-wrap">
@@ -376,11 +378,12 @@ const savingsOverrideModel = computed({
                 <UButton
                   color="neutral"
                   icon="i-lucide-plus"
-                  label="Add income"
                   size="sm"
                   class="w-fit"
                   @click="budgetStore.addIncomeLine(selectedMonthId)"
-                />
+                >
+                  <span class="hidden sm:inline">Add income</span>
+                </UButton>
               </div>
             </template>
 
@@ -411,8 +414,8 @@ const savingsOverrideModel = computed({
                   <UInput v-model="line.name" placeholder="Bonus, side income, etc." />
                 </UFormField>
 
-                <div class="flex items-end gap-3">
-                  <UFormField :name="`income-amount-${line.id}`" label="Amount" class="flex-1">
+                <div class="flex items-end gap-3 min-w-0">
+                  <UFormField :name="`income-amount-${line.id}`" label="Amount" class="flex-1 min-w-0">
                     <UInput
                       :model-value="line.amount"
                       type="number"
@@ -425,6 +428,7 @@ const savingsOverrideModel = computed({
                     color="neutral"
                     variant="ghost"
                     icon="i-lucide-trash-2"
+                    class="shrink-0"
                     @click="budgetStore.removeIncomeLine(selectedMonthId, line.id)"
                   />
                 </div>
@@ -446,19 +450,20 @@ const savingsOverrideModel = computed({
                 description="Defaults to your Savings plan. Override per month if needed."
                 class="flex flex-col gap-2"
               >
-                <div class="flex items-center gap-3 w-full">
+                <div class="flex items-center gap-3 w-full min-w-0">
                   <UInput
                     v-model.number="savingsOverrideModel"
                     type="number"
                     min="0"
                     step="10"
-                    class="flex-1"
+                    class="flex-1 min-w-0"
                     placeholder="(use default)"
                   />
                   <UButton
                     color="neutral"
                     variant="ghost"
                     icon="i-lucide-rotate-ccw"
+                    class="shrink-0"
                     @click="budgetStore.setPlannedSavingsOverride(selectedMonthId, null)"
                   />
                 </div>
@@ -492,8 +497,8 @@ const savingsOverrideModel = computed({
       Failed to load transaction data. Please try refreshing the page.
     </div>
 
-    <!-- Spending breakdown - always stacked, scrollable tables -->
-    <div v-else-if="subcategoryBreakdown.length" class="flex flex-col gap-4">
+    <!-- Spending breakdown - stack on mobile, 2 cols on xl+ -->
+    <div v-else-if="subcategoryBreakdown.length" class="grid grid-cols-1 xl:grid-cols-2 gap-4">
       <!-- Main Categories Table -->
       <UCard>
         <template #header>
@@ -502,7 +507,50 @@ const savingsOverrideModel = computed({
           </h3>
         </template>
 
-        <div class="overflow-x-auto">
+        <div class="sm:hidden divide-y divide-default/50">
+          <div
+            v-for="row in mainCategoryBreakdown"
+            :key="row.mainCategory"
+            class="py-2.5 flex items-start justify-between gap-3"
+          >
+            <div class="min-w-0">
+              <div class="text-sm text-highlighted font-medium capitalize truncate">
+                {{ row.mainCategory }}
+              </div>
+              <div class="text-xs text-muted">
+                {{ previousMonthLabel }}: {{ formatCurrency(row.previousMonth) }}
+              </div>
+            </div>
+
+            <div class="text-right shrink-0">
+              <div class="text-sm text-highlighted font-medium whitespace-nowrap">
+                {{ formatCurrency(row.actual) }}
+              </div>
+              <div class="text-xs whitespace-nowrap">
+                <span
+                  class="inline-flex items-center gap-1 font-medium"
+                  :class="{
+                    'text-success': row.momChange < 0,
+                    'text-error': row.momChange > 0,
+                    'text-muted': row.momChange === 0
+                  }"
+                >
+                  <UIcon
+                    v-if="row.momChange !== 0"
+                    :name="row.momChange > 0 ? 'i-lucide-trending-up' : 'i-lucide-trending-down'"
+                    class="size-3.5"
+                  />
+                  <template v-if="row.momChangePercent !== null">
+                    {{ row.momChange > 0 ? '+' : '' }}{{ row.momChangePercent }}%
+                  </template>
+                  <template v-else>—</template>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hidden sm:block overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
               <tr class="border-b border-default text-xs text-muted uppercase">
@@ -569,7 +617,60 @@ const savingsOverrideModel = computed({
           </h3>
         </template>
 
-        <div class="overflow-x-auto">
+        <div class="sm:hidden divide-y divide-default/50">
+          <div
+            v-for="row in subcategoryBreakdown"
+            :key="row.subcategory"
+            class="py-2.5 flex items-start justify-between gap-3"
+          >
+            <div class="min-w-0">
+              <div class="text-sm text-highlighted capitalize truncate">
+                {{ row.subcategory }}
+              </div>
+
+              <div class="mt-1 flex items-center gap-2 flex-wrap">
+                <UBadge
+                  :color="row.mainCategory === 'needs' ? 'info' : row.mainCategory === 'wants' ? 'warning' : 'success'"
+                  variant="subtle"
+                  size="sm"
+                >
+                  {{ row.mainCategory }}
+                </UBadge>
+                <span class="text-xs text-muted">
+                  {{ previousMonthLabel }}: {{ formatCurrency(row.previousMonth) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="text-right shrink-0">
+              <div class="text-sm text-highlighted font-medium whitespace-nowrap">
+                {{ formatCurrency(row.actual) }}
+              </div>
+              <div class="text-xs whitespace-nowrap">
+                <span
+                  class="inline-flex items-center gap-1 font-medium"
+                  :class="{
+                    'text-success': row.momChange < 0,
+                    'text-error': row.momChange > 0,
+                    'text-muted': row.momChange === 0
+                  }"
+                >
+                  <UIcon
+                    v-if="row.momChange !== 0"
+                    :name="row.momChange > 0 ? 'i-lucide-trending-up' : 'i-lucide-trending-down'"
+                    class="size-3.5"
+                  />
+                  <template v-if="row.momChangePercent !== null">
+                    {{ row.momChange > 0 ? '+' : '' }}{{ row.momChangePercent }}%
+                  </template>
+                  <template v-else>—</template>
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hidden sm:block overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
               <tr class="border-b border-default text-xs text-muted uppercase">
