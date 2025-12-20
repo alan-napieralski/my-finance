@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { format } from 'date-fns'
 import type { TabsItem } from '@nuxt/ui'
+import type { WantPlan } from '~/types'
 import { storeToRefs } from 'pinia'
 import { usePlansStore } from '~/stores/plans'
 import { useBudgetStore } from '~/stores/budget'
@@ -11,6 +12,16 @@ const budgetStore = useBudgetStore()
 
 const { savings, wants, debts, totalSavingsPerMonth, totalWantsPerMonth } = storeToRefs(plansStore)
 const { setGeneralSavings, addWant, removeWant, addDebt, removeDebt, getWantMonthlyAmount, getDebtMonthlyPayment } = plansStore
+
+const getWantCalculatedMonthlyAmount = (want: WantPlan): number => {
+  const targetAmount = Number(want.targetAmount ?? 0)
+  const monthsToTarget = Number(want.monthsToTarget ?? 0)
+
+  if (!Number.isFinite(targetAmount) || targetAmount <= 0) return 0
+  if (!Number.isFinite(monthsToTarget) || monthsToTarget <= 0) return 0
+
+  return targetAmount / monthsToTarget
+}
 
 const currentMonthId = format(new Date(), 'yyyy-MM')
 const currentMonth = computed(() => budgetStore.getOrCreateMonth(currentMonthId))
@@ -194,7 +205,7 @@ const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
                   label="Monthly (calculated)"
                 >
                   <UInput
-                    :model-value="formatCurrency(getWantMonthlyAmount({ ...want, monthlyAmount: 0 }))"
+                    :model-value="formatCurrency(getWantCalculatedMonthlyAmount(want))"
                     disabled
                   />
                 </UFormField>
