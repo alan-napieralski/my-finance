@@ -270,6 +270,8 @@ const savingsOverrideModel = computed({
   set: (value: number | null) => budgetStore.setPlannedSavingsOverride(selectedMonthId.value, value)
 })
 
+// Local UI-only type for stats displayed in this component.
+// Kept here rather than in app/types to avoid leaking view-specific concerns.
 type BudgetStatCard = {
   key: string
   label: string

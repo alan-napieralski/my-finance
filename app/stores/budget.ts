@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 import { defineStore } from 'pinia'
 import { useStorage } from '@vueuse/core'
-import type { BudgetMonth, IncomeLine, WantOverride, DebtPaymentStatus } from '~/types'
+import type { BudgetMonth, IncomeLine, WantOverride, WantOverridePatch, DebtPaymentStatus } from '~/types'
 
 type BudgetMonthMap = Record<string, BudgetMonth>
 
@@ -19,11 +19,6 @@ const validateMonthId = (monthId: string): void => {
   if (!/^\d{4}-\d{2}$/.test(monthId)) {
     throw new Error(`Invalid monthId format: ${monthId}. Expected YYYY-MM`)
   }
-}
-
-type WantOverridePatch = {
-  disabled?: boolean
-  amountOverride?: number | null
 }
 
 export const useBudgetStore = defineStore('budget', () => {

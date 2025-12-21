@@ -83,6 +83,11 @@ export type WantOverride = {
   amountOverride?: number
 }
 
+export type WantOverridePatch = {
+  disabled?: boolean
+  amountOverride?: number | null
+}
+
 export interface DebtPlan {
   id: string
   name: string
