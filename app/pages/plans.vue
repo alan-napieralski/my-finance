@@ -23,8 +23,32 @@ const getWantCalculatedMonthlyAmount = (want: WantPlan): number => {
   return targetAmount / monthsToTarget
 }
 
-const currentMonthId = format(new Date(), 'yyyy-MM')
-const currentMonth = computed(() => budgetStore.getOrCreateMonth(currentMonthId))
+const currentMonthId = ref(format(new Date(), 'yyyy-MM'))
+const currentMonth = computed(() => budgetStore.getOrCreateMonth(currentMonthId.value))
+
+const refreshCurrentMonthId = () => {
+  currentMonthId.value = format(new Date(), 'yyyy-MM')
+}
+
+const handleVisibilityChange = () => {
+  if (document.visibilityState === 'visible') {
+    refreshCurrentMonthId()
+  }
+}
+
+onMounted(() => {
+  if (import.meta.client) {
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('focus', refreshCurrentMonthId)
+  }
+})
+
+onUnmounted(() => {
+  if (import.meta.client) {
+    document.removeEventListener('visibilitychange', handleVisibilityChange)
+    window.removeEventListener('focus', refreshCurrentMonthId)
+  }
+})
 
 const isDebtPaidThisMonth = (debtId: string): boolean => {
   return Boolean(currentMonth.value.debtPayments?.[debtId]?.paid)
