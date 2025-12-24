@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format, startOfMonth, startOfWeek } from 'date-fns'
 import { VisXYContainer, VisLine, VisAxis, VisArea, VisCrosshair, VisTooltip } from '@unovis/vue'
-import type { Period, Range } from '~/types'
-import { parseTransactionDate } from '~/utils/dateParser'
+import type { Period, Range, FinanceEntry } from '~/types'
+import { parseFinanceTransactions } from '~/utils/finance/transactions'
 
 const cardRef = useTemplateRef<HTMLElement | null>('cardRef')
 
@@ -16,12 +16,6 @@ type DataRecord = {
   amount: number
 }
 
-type FinanceEntry = {
-  id: string
-  timestamp: string
-  data: Record<string, unknown>
-}
-
 const { width } = useElementSize(cardRef)
 
 const data = ref<DataRecord[]>([])
@@ -32,43 +26,13 @@ const { fetchLatest } = useFinanceData()
 const POLL_INTERVAL_MS = 10000
 let pollId: number | null = null
 
-const extractTransactions = (entry: FinanceEntry | null): { date: Date, amount: number }[] => {
-  if (!entry || !entry.data) {
-    return []
-  }
-
-  const payload = entry.data
-
-  // Debug: inspect raw payload from n8n
-
-  const source = Array.isArray(payload.transactions)
-    ? payload.transactions
-    : Array.isArray(payload)
-      ? payload
-      : []
-
-  return source
-    .map((item: unknown) => {
-      const record = item as Record<string, unknown>
-      const date = parseTransactionDate(record.date as string)
-      const amount = typeof record.amount === 'string' ? Number.parseFloat(record.amount) : Number(record.amount)
-
-      if (!date || Number.isNaN(amount)) {
-        return null
-      }
-
-      return { date, amount }
-    })
-    .filter((item): item is { date: Date, amount: number } => item !== null)
-}
-
 const buildChartData = () => {
   if (!latestEntry.value) {
     data.value = []
     return
   }
 
-  const transactions = extractTransactions(latestEntry.value).filter(({ date }) => {
+  const transactions = parseFinanceTransactions(latestEntry.value).filter(({ date }) => {
     return date >= props.range.start && date <= props.range.end
   })
 

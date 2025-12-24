@@ -2,7 +2,7 @@
 import { h } from 'vue'
 import type { TableColumn } from '@nuxt/ui'
 import type { Period, Range, FinanceEntry, TransactionRow, SortField, SortDirection } from '~/types'
-import { parseTransactionDate } from '~/utils/dateParser'
+import { toTransactionRows } from '~/utils/finance/transactions'
 
 const props = defineProps<{
   period: Period
@@ -14,46 +14,6 @@ const selectedCategories = ref<string[]>([])
 const sortField = ref<SortField>('date')
 const sortDirection = ref<SortDirection>('desc')
 
-const extractTransactions = (entry: FinanceEntry | null): TransactionRow[] => {
-  if (!entry || !entry.data) {
-    return []
-  }
-
-  const payload = entry.data
-  const source = Array.isArray(payload)
-    ? payload
-    : 'transactions' in payload && Array.isArray(payload.transactions)
-      ? payload.transactions
-      : []
-
-  return source
-    .map((item: unknown, index: number) => {
-      const record = item as Record<string, unknown>
-      const date = parseTransactionDate(record.date as string)
-      const amount = typeof record.amount === 'string' ? Number.parseFloat(record.amount) : Number(record.amount)
-      const balance = record.balance != null ? Number(record.balance) : undefined
-
-      if (!date || Number.isNaN(amount)) {
-        return null
-      }
-
-      const result: TransactionRow = {
-        id: String(record.id ?? index),
-        date: date.toISOString(),
-        description: (record.description as string) ?? '',
-        amount,
-        balance
-      }
-
-      if (record.category != null) {
-        result.category = record.category as string
-      }
-
-      return result
-    })
-    .filter((item): item is TransactionRow => item !== null)
-}
-
 const { data: allTransactions } = await useAsyncData<TransactionRow[]>('finance-transactions', async () => {
   let latest: FinanceEntry | null = null
 
@@ -64,7 +24,7 @@ const { data: allTransactions } = await useAsyncData<TransactionRow[]>('finance-
     return []
   }
 
-  const all = extractTransactions(latest)
+  const all = toTransactionRows(latest)
 
   const filtered = all.filter((tx) => {
     const date = new Date(tx.date)

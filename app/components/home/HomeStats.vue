@@ -1,50 +1,12 @@
 <script setup lang="ts">
-import type { Period, Range, Stat } from '~/types'
-import { parseTransactionDate } from '~/utils/dateParser'
+import type { Period, Range, Stat, FinanceEntry } from '~/types'
 import { formatCurrency } from '~/utils/currency'
+import { parseFinanceTransactions } from '~/utils/finance/transactions'
 
 const props = defineProps<{
   period: Period
   range: Range
 }>()
-
-type FinanceEntry = {
-  id: string
-  timestamp: string
-  data: Record<string, unknown>
-}
-
-type Transaction = {
-  date: Date
-  amount: number
-}
-
-const extractTransactions = (entry: FinanceEntry | null): Transaction[] => {
-  if (!entry || !entry.data) {
-    return []
-  }
-
-  const payload = entry.data
-  const source = Array.isArray(payload.transactions)
-    ? payload.transactions
-    : Array.isArray(payload)
-      ? payload
-      : []
-
-  return source
-    .map((item: unknown) => {
-      const record = item as Record<string, unknown>
-      const date = parseTransactionDate(record.date as string)
-      const amount = typeof record.amount === 'string' ? Number.parseFloat(record.amount) : Number(record.amount)
-
-      if (!date || Number.isNaN(amount)) {
-        return null
-      }
-
-      return { date, amount }
-    })
-    .filter((item): item is Transaction => item !== null)
-}
 
 const { data: stats } = await useAsyncData<Stat[]>('stats', async () => {
   let latest: FinanceEntry | null = null
@@ -56,7 +18,7 @@ const { data: stats } = await useAsyncData<Stat[]>('stats', async () => {
     return []
   }
 
-  const all = extractTransactions(latest)
+  const all = parseFinanceTransactions(latest)
 
   const transactionsInRange = all.filter((tx) => {
     return tx.date >= props.range.start && tx.date <= props.range.end
