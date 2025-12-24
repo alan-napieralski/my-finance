@@ -59,7 +59,7 @@ const month = computed(() => budgetStore.getOrCreateMonth(props.monthId))
             @update:model-value="(value) => {
               const incomeLine = month.income[0]
               if (incomeLine) {
-                budgetStore.updateIncomeLine(monthId, incomeLine.id, { amount: value })
+                budgetStore.updateIncomeLine(monthId, incomeLine.id, { amount: Number(value) })
               }
             }"
           />
@@ -86,7 +86,7 @@ const month = computed(() => budgetStore.getOrCreateMonth(props.monthId))
               :model-value="line.amount"
               type="number"
               step="10"
-              @update:model-value="budgetStore.updateIncomeLine(monthId, line.id, { amount: $event })"
+              @update:model-value="(value) => budgetStore.updateIncomeLine(monthId, line.id, { amount: Number(value) })"
             />
           </UFormField>
 
