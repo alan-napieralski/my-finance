@@ -1,10 +1,5 @@
 <script setup lang="ts">
-export type BudgetStatCard = {
-  key: string
-  label: string
-  value: string
-  valueClass?: string
-}
+import type { BudgetStatCard } from '~/types'
 
 defineProps<{
   stats: BudgetStatCard[]

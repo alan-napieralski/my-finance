@@ -45,40 +45,49 @@ const normalizeTransactionsPayload = (entry: FinanceEntry | null): unknown[] => 
 export function parseFinanceTransactions(entry: FinanceEntry | null): ParsedFinanceTransaction[] {
   const source = normalizeTransactionsPayload(entry)
 
-  return source
-    .map((item, index) => {
-      const record = item as AnyRecord
+  const describeValue = (value: unknown): string => {
+    try {
+      return JSON.stringify(value)
+    } catch {
+      return String(value)
+    }
+  }
 
-      const date = parseTransactionDate(String(record.date ?? ''))
-      const amount = toNumber(record.amount)
+  return source.map((item, index) => {
+    const record = item as AnyRecord
 
-      if (!date || amount == null) {
-        return null
-      }
+    const rawDate = record.date
+    const rawAmount = record.amount
 
-      const balance = record.balance == null ? undefined : toNumber(record.balance) ?? undefined
+    const date = parseTransactionDate(String(rawDate ?? ''))
+    const amount = toNumber(rawAmount)
 
-      const parsed: ParsedFinanceTransaction = {
-        id: String(record.id ?? index),
-        date,
-        amount
-      }
+    if (!date || amount == null) {
+      throw new Error(`[finance/transactions] Invalid transaction at index ${index}: date=${describeValue(rawDate)} amount=${describeValue(rawAmount)}`)
+    }
 
-      if (record.category != null) {
-        parsed.category = String(record.category)
-      }
+    const balance = record.balance == null ? undefined : toNumber(record.balance) ?? undefined
 
-      if (record.description != null) {
-        parsed.description = String(record.description)
-      }
+    const parsed: ParsedFinanceTransaction = {
+      id: String(record.id ?? index),
+      date,
+      amount
+    }
 
-      if (balance != null) {
-        parsed.balance = balance
-      }
+    if (record.category != null) {
+      parsed.category = String(record.category)
+    }
 
-      return parsed
-    })
-    .filter((item): item is ParsedFinanceTransaction => item !== null)
+    if (record.description != null) {
+      parsed.description = String(record.description)
+    }
+
+    if (balance != null) {
+      parsed.balance = balance
+    }
+
+    return parsed
+  })
 }
 
 export function toBudgetTransactions(entry: FinanceEntry | null): Transaction[] {

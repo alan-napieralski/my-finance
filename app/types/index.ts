@@ -1,5 +1,0 @@
-export * from './analytics'
-export * from './budget'
-export * from './finance'
-export * from './plans'
-export * from './template'

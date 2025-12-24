@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { format } from 'date-fns'
 import { storeToRefs } from 'pinia'
+import { z } from 'zod'
 import { useBudgetStore } from '~/stores/budget'
 import { usePlansStore } from '~/stores/plans'
 import { formatCurrency } from '~/utils/currency'
@@ -8,6 +9,18 @@ import { formatCurrency } from '~/utils/currency'
 const props = defineProps<{
   monthId: string
 }>()
+
+const monthIdSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+
+const validateMonthId = (monthId: unknown): string => {
+  const result = monthIdSchema.safeParse(monthId)
+  if (!result.success) {
+    throw new Error(`[BudgetPlannerCommitmentsCard] Invalid monthId: ${String(monthId)}. Expected YYYY-MM.`)
+  }
+  return result.data
+}
+
+const validatedMonthId = computed(() => validateMonthId(props.monthId))
 
 const plansStore = usePlansStore()
 const budgetStore = useBudgetStore()
@@ -20,7 +33,7 @@ const {
   totalRecurringPaymentsPerMonth
 } = storeToRefs(plansStore)
 
-const month = computed(() => budgetStore.getOrCreateMonth(props.monthId))
+const month = computed(() => budgetStore.getOrCreateMonth(validatedMonthId.value))
 
 const plannedSavings = computed(() => {
   const override = month.value.plannedSavingsOverride
@@ -69,8 +82,32 @@ const plannedCommitmentsTotal = computed(() => {
 
 const savingsOverrideModel = computed({
   get: () => month.value.plannedSavingsOverride ?? null,
-  set: (value: number | null) => budgetStore.setPlannedSavingsOverride(props.monthId, value)
+  set: (value: number | null) => {
+    const monthId = validateMonthId(props.monthId)
+    budgetStore.setPlannedSavingsOverride(monthId, value)
+  }
 })
+
+const resetPlannedSavingsOverride = () => {
+  const monthId = validateMonthId(props.monthId)
+  budgetStore.setPlannedSavingsOverride(monthId, null)
+}
+
+const setWantAmountOverride = (wantId: string, value: unknown) => {
+  const monthId = validateMonthId(props.monthId)
+  const amount = value == null || String(value) === '' ? null : Number(value)
+  budgetStore.setWantOverride(monthId, wantId, { amountOverride: amount !== null && Number.isFinite(amount) ? amount : null })
+}
+
+const setWantDisabled = (wantId: string, value: unknown) => {
+  const monthId = validateMonthId(props.monthId)
+  budgetStore.setWantOverride(monthId, wantId, { disabled: Boolean(value) })
+}
+
+const clearWantOverride = (wantId: string) => {
+  const monthId = validateMonthId(props.monthId)
+  budgetStore.clearWantOverride(monthId, wantId)
+}
 </script>
 
 <template>
@@ -102,7 +139,7 @@ const savingsOverrideModel = computed({
             variant="ghost"
             icon="i-lucide-rotate-ccw"
             class="shrink-0"
-            @click="budgetStore.setPlannedSavingsOverride(monthId, null)"
+            @click="resetPlannedSavingsOverride()"
           />
         </div>
       </UFormField>
@@ -128,7 +165,7 @@ const savingsOverrideModel = computed({
 
       <div class="pt-4 border-t border-default/50">
         <h4 class="text-sm font-medium text-highlighted mb-3">
-          Wants ({{ format(new Date(`${monthId}-01T00:00:00`), 'MMM yyyy') }})
+          Wants ({{ format(new Date(`${validatedMonthId}-01T00:00:00`), 'MMM yyyy') }})
         </h4>
 
         <div v-if="wants.length" class="sm:hidden divide-y divide-default/50">
@@ -171,10 +208,7 @@ const savingsOverrideModel = computed({
                   min="0"
                   step="10"
                   placeholder="(default)"
-                  @update:model-value="(value) => {
-                    const amount = value == null || String(value) === '' ? null : Number(value)
-                    budgetStore.setWantOverride(monthId, want.id, { amountOverride: amount !== null && Number.isFinite(amount) ? amount : null })
-                  }"
+                  @update:model-value="value => setWantAmountOverride(want.id, value)"
                 />
               </UFormField>
 
@@ -185,7 +219,7 @@ const savingsOverrideModel = computed({
               >
                 <USwitch
                   :model-value="Boolean(month.wantOverrides?.[want.id]?.disabled)"
-                  @update:model-value="value => budgetStore.setWantOverride(monthId, want.id, { disabled: Boolean(value) })"
+                  @update:model-value="value => setWantDisabled(want.id, value)"
                 />
               </UFormField>
 
@@ -194,7 +228,7 @@ const savingsOverrideModel = computed({
                 variant="ghost"
                 icon="i-lucide-rotate-ccw"
                 class="shrink-0"
-                @click="budgetStore.clearWantOverride(monthId, want.id)"
+                @click="clearWantOverride(want.id)"
               />
             </div>
           </div>
@@ -244,16 +278,13 @@ const savingsOverrideModel = computed({
                     step="10"
                     placeholder="(default)"
                     class="w-36"
-                    @update:model-value="(value) => {
-                      const amount = value == null || String(value) === '' ? null : Number(value)
-                      budgetStore.setWantOverride(monthId, want.id, { amountOverride: amount !== null && Number.isFinite(amount) ? amount : null })
-                    }"
+                    @update:model-value="value => setWantAmountOverride(want.id, value)"
                   />
                 </td>
                 <td class="py-2.5 text-center">
                   <USwitch
                     :model-value="Boolean(month.wantOverrides?.[want.id]?.disabled)"
-                    @update:model-value="value => budgetStore.setWantOverride(monthId, want.id, { disabled: Boolean(value) })"
+                    @update:model-value="value => setWantDisabled(want.id, value)"
                   />
                 </td>
                 <td class="py-2.5 text-right text-highlighted font-medium whitespace-nowrap">
@@ -264,7 +295,7 @@ const savingsOverrideModel = computed({
                     color="neutral"
                     variant="ghost"
                     icon="i-lucide-rotate-ccw"
-                    @click="budgetStore.clearWantOverride(monthId, want.id)"
+                    @click="clearWantOverride(want.id)"
                   />
                 </td>
               </tr>

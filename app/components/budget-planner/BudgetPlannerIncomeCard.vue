@@ -1,9 +1,23 @@
 <script setup lang="ts">
+import { z } from 'zod'
 import { useBudgetStore } from '~/stores/budget'
 
 const props = defineProps<{
   monthId: string
 }>()
+
+const monthIdSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+
+watchEffect(() => {
+  const result = monthIdSchema.safeParse(props.monthId)
+  if (!result.success) {
+    console.error('[BudgetPlannerIncomeCard] Invalid monthId:', {
+      monthId: props.monthId,
+      issues: result.error.issues,
+      formatted: result.error.format()
+    })
+  }
+})
 
 const budgetStore = useBudgetStore()
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { format } from 'date-fns'
 import { storeToRefs } from 'pinia'
+import { z } from 'zod'
 import { useBudgetStore } from '~/stores/budget'
 import { usePlansStore } from '~/stores/plans'
 import { formatCurrency } from '~/utils/currency'
@@ -11,11 +12,21 @@ const budgetStore = useBudgetStore()
 const { debts } = storeToRefs(plansStore)
 const { addDebt, removeDebt, getDebtMonthlyPayment } = plansStore
 
-const currentMonthId = ref(format(new Date(), 'yyyy-MM'))
+const monthIdSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)
+
+const validateMonthId = (monthId: unknown): string => {
+  const result = monthIdSchema.safeParse(monthId)
+  if (!result.success) {
+    throw new Error(`[PlansDebtsTab] Invalid monthId: ${String(monthId)}. Expected YYYY-MM.`)
+  }
+  return result.data
+}
+
+const currentMonthId = ref(validateMonthId(format(new Date(), 'yyyy-MM')))
 const currentMonth = computed(() => budgetStore.getOrCreateMonth(currentMonthId.value))
 
 const refreshCurrentMonthId = () => {
-  currentMonthId.value = format(new Date(), 'yyyy-MM')
+  currentMonthId.value = validateMonthId(format(new Date(), 'yyyy-MM'))
 }
 
 const handleVisibilityChange = () => {
@@ -47,6 +58,22 @@ const totalDebtPaymentsThisMonth = computed(() => {
     return sum + (isDebtPaidThisMonth(debt.id) ? 0 : getDebtMonthlyPayment(debt))
   }, 0)
 })
+
+const setDebtPaidThisMonth = (debtId: string, value: unknown) => {
+  const monthId = validateMonthId(currentMonthId.value)
+  if (!monthId) {
+    throw new Error(`[PlansDebtsTab] Invalid monthId in PlansDebtsTab: ${String(currentMonthId.value)}`)
+  }
+  budgetStore.setDebtPaymentStatus(monthId, debtId, Boolean(value))
+}
+
+const resetDebtPaidThisMonth = (debtId: string) => {
+  const monthId = validateMonthId(currentMonthId.value)
+  if (!monthId) {
+    throw new Error(`[PlansDebtsTab] Invalid monthId in PlansDebtsTab: ${String(currentMonthId.value)}`)
+  }
+  budgetStore.clearDebtPaymentStatus(monthId, debtId)
+}
 </script>
 
 <template>
@@ -157,14 +184,14 @@ const totalDebtPaymentsThisMonth = computed(() => {
               <div class="flex items-center justify-between gap-3">
                 <USwitch
                   :model-value="isDebtPaidThisMonth(debt.id)"
-                  @update:model-value="value => budgetStore.setDebtPaymentStatus(currentMonthId, debt.id, Boolean(value))"
+                  @update:model-value="value => setDebtPaidThisMonth(debt.id, value)"
                 />
                 <UButton
                   color="neutral"
                   variant="ghost"
                   icon="i-lucide-rotate-ccw"
                   class="shrink-0"
-                  @click="budgetStore.clearDebtPaymentStatus(currentMonthId, debt.id)"
+                  @click="resetDebtPaidThisMonth(debt.id)"
                 />
               </div>
             </UFormField>
