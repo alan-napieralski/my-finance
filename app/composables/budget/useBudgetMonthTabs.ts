@@ -1,13 +1,10 @@
 import { format, subMonths } from 'date-fns'
 import type { TabsItem } from '#ui/types'
-import { z } from 'zod'
+import { monthIdSchema } from '~/types/budget'
 
 type UseBudgetMonthTabsOptions = {
   monthsBack?: number
 }
-
-// Zod schema to validate YYYY-MM format
-const monthIdSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)
 
 export function useBudgetMonthTabs(options: UseBudgetMonthTabsOptions = {}) {
   const monthsBack = options.monthsBack ?? 12

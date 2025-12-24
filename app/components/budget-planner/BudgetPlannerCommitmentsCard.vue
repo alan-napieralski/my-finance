@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { format } from 'date-fns'
 import { storeToRefs } from 'pinia'
-import { z } from 'zod'
+import { monthIdSchema } from '~/types/budget'
 import { useBudgetStore } from '~/stores/budget'
 import { usePlansStore } from '~/stores/plans'
 import { formatCurrency } from '~/utils/currency'
@@ -10,12 +10,11 @@ const props = defineProps<{
   monthId: string
 }>()
 
-const monthIdSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)
-
 const validateMonthId = (monthId: unknown): string => {
   const result = monthIdSchema.safeParse(monthId)
   if (!result.success) {
-    throw new Error(`[BudgetPlannerCommitmentsCard] Invalid monthId: ${String(monthId)}. Expected YYYY-MM.`)
+    const message = result.error.issues[0]?.message ?? result.error.message
+    throw new Error(`[BudgetPlannerCommitmentsCard] Invalid monthId: ${String(monthId)}. ${message}`)
   }
   return result.data
 }
