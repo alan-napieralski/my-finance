@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { endOfMonth, format, startOfMonth, subMonths } from 'date-fns'
-import type { TabsItem } from '@nuxt/ui'
+import type { TabsItem } from '#ui/types'
 import { storeToRefs } from 'pinia'
 import { usePlansStore } from '~/stores/plans'
 import { useBudgetStore } from '~/stores/budget'
