@@ -2,6 +2,7 @@
 import { endOfMonth, format, startOfMonth, subMonths } from 'date-fns'
 import type { TabsItem } from '#ui/types'
 import { storeToRefs } from 'pinia'
+import { z } from 'zod'
 import { usePlansStore } from '~/stores/plans'
 import { useBudgetStore } from '~/stores/budget'
 import { parseTransactionDate } from '~/utils/dateParser'
@@ -55,10 +56,24 @@ const monthTabItems = computed<TabsItem[]>(() => {
 
 const selectedMonthId = ref<string>(format(now.value, 'yyyy-MM'))
 
-const previousMonthId = computed(() => format(subMonths(new Date(`${selectedMonthId.value}-01T00:00:00`), 1), 'yyyy-MM'))
-const previousMonthLabel = computed(() => format(subMonths(new Date(`${selectedMonthId.value}-01T00:00:00`), 1), 'MMM'))
+// Zod schema to validate YYYY-MM format
+const monthIdSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)
 
-const month = computed(() => budgetStore.getOrCreateMonth(selectedMonthId.value))
+// Validate and sanitize selectedMonthId before using it in computed properties
+const validatedMonthId = computed(() => {
+  const result = monthIdSchema.safeParse(selectedMonthId.value)
+  if (!result.success) {
+    console.error('[HomeBudgetPlanner] Invalid month ID format:', selectedMonthId.value)
+    // Fallback to current month
+    return format(now.value, 'yyyy-MM')
+  }
+  return result.data
+})
+
+const previousMonthId = computed(() => format(subMonths(new Date(`${validatedMonthId.value}-01T00:00:00`), 1), 'yyyy-MM'))
+const previousMonthLabel = computed(() => format(subMonths(new Date(`${validatedMonthId.value}-01T00:00:00`), 1), 'MMM'))
+
+const month = computed(() => budgetStore.getOrCreateMonth(validatedMonthId.value))
 
 const plannedIncomeTotal = computed(() => {
   return month.value.income.reduce((sum, line) => sum + (line.amount || 0), 0)
@@ -161,7 +176,7 @@ const getMonthRange = (monthId: string) => {
   return { start, end }
 }
 
-const monthRange = computed(() => getMonthRange(selectedMonthId.value))
+const monthRange = computed(() => getMonthRange(validatedMonthId.value))
 
 const allTransactions = computed(() => extractTransactions(latestEntry.value))
 
@@ -201,7 +216,7 @@ const buildActualByCategoryForMonth = (monthId: string) => {
   return buckets
 }
 
-const actualByCategoryMap = computed(() => buildActualByCategoryForMonth(selectedMonthId.value))
+const actualByCategoryMap = computed(() => buildActualByCategoryForMonth(validatedMonthId.value))
 
 const previousMonthActualByCategory = computed(() => {
   return buildActualByCategoryForMonth(previousMonthId.value)
@@ -267,7 +282,7 @@ const mainCategoryBreakdown = computed<MainCategorySummary[]>(() => {
 
 const savingsOverrideModel = computed({
   get: () => month.value.plannedSavingsOverride ?? null,
-  set: (value: number | null) => budgetStore.setPlannedSavingsOverride(selectedMonthId.value, value)
+  set: (value: number | null) => budgetStore.setPlannedSavingsOverride(validatedMonthId.value, value)
 })
 
 // Local UI-only type for stats displayed in this component.
@@ -345,7 +360,7 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                   icon="i-lucide-plus"
                   size="sm"
                   class="w-fit"
-                  @click="budgetStore.addIncomeLine(selectedMonthId)"
+                  @click="budgetStore.addIncomeLine(validatedMonthId)"
                 >
                   <span class="hidden sm:inline">Add income</span>
                 </UButton>
@@ -368,7 +383,7 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                     @update:model-value="(value) => {
                       const incomeLine = month.income[0]
                       if (incomeLine) {
-                        budgetStore.updateIncomeLine(selectedMonthId, incomeLine.id, { amount: value })
+                        budgetStore.updateIncomeLine(validatedMonthId, incomeLine.id, { amount: value })
                       }
                     }"
                   />
@@ -385,7 +400,7 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                   <UInput
                     :model-value="line.name"
                     placeholder="Bonus, side income, etc."
-                    @update:model-value="budgetStore.updateIncomeLine(selectedMonthId, line.id, { name: $event })"
+                    @update:model-value="budgetStore.updateIncomeLine(validatedMonthId, line.id, { name: $event })"
                   />
                 </UFormField>
 
@@ -395,7 +410,7 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                       :model-value="line.amount"
                       type="number"
                       step="10"
-                      @update:model-value="budgetStore.updateIncomeLine(selectedMonthId, line.id, { amount: $event })"
+                      @update:model-value="budgetStore.updateIncomeLine(validatedMonthId, line.id, { amount: $event })"
                     />
                   </UFormField>
 
@@ -404,7 +419,7 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                     variant="ghost"
                     icon="i-lucide-trash-2"
                     class="shrink-0"
-                    @click="budgetStore.removeIncomeLine(selectedMonthId, line.id)"
+                    @click="budgetStore.removeIncomeLine(validatedMonthId, line.id)"
                   />
                 </div>
               </div>
@@ -439,7 +454,7 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                     variant="ghost"
                     icon="i-lucide-rotate-ccw"
                     class="shrink-0"
-                    @click="budgetStore.setPlannedSavingsOverride(selectedMonthId, null)"
+                    @click="budgetStore.setPlannedSavingsOverride(validatedMonthId, null)"
                   />
                 </div>
               </UFormField>
@@ -465,7 +480,7 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
 
               <div class="pt-4 border-t border-default/50">
                 <h4 class="text-sm font-medium text-highlighted mb-3">
-                  Wants ({{ format(new Date(`${selectedMonthId}-01T00:00:00`), 'MMM yyyy') }})
+                  Wants ({{ format(new Date(`${validatedMonthId}-01T00:00:00`), 'MMM yyyy') }})
                 </h4>
 
                 <div v-if="wants.length" class="sm:hidden divide-y divide-default/50">
@@ -510,7 +525,7 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                           placeholder="(default)"
                           @update:model-value="(value) => {
                             const amount = value == null || String(value) === '' ? null : Number(value)
-                            budgetStore.setWantOverride(selectedMonthId, want.id, { amountOverride: amount !== null && Number.isFinite(amount) ? amount : null })
+                            budgetStore.setWantOverride(validatedMonthId, want.id, { amountOverride: amount !== null && Number.isFinite(amount) ? amount : null })
                           }"
                         />
                       </UFormField>
@@ -522,7 +537,7 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                       >
                         <USwitch
                           :model-value="Boolean(month.wantOverrides?.[want.id]?.disabled)"
-                          @update:model-value="value => budgetStore.setWantOverride(selectedMonthId, want.id, { disabled: Boolean(value) })"
+                          @update:model-value="value => budgetStore.setWantOverride(validatedMonthId, want.id, { disabled: Boolean(value) })"
                         />
                       </UFormField>
 
@@ -531,7 +546,7 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                         variant="ghost"
                         icon="i-lucide-rotate-ccw"
                         class="shrink-0"
-                        @click="budgetStore.clearWantOverride(selectedMonthId, want.id)"
+                        @click="budgetStore.clearWantOverride(validatedMonthId, want.id)"
                       />
                     </div>
                   </div>
@@ -583,14 +598,14 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                             class="w-36"
                             @update:model-value="(value) => {
                               const amount = value == null || String(value) === '' ? null : Number(value)
-                              budgetStore.setWantOverride(selectedMonthId, want.id, { amountOverride: amount !== null && Number.isFinite(amount) ? amount : null })
+                              budgetStore.setWantOverride(validatedMonthId, want.id, { amountOverride: amount !== null && Number.isFinite(amount) ? amount : null })
                             }"
                           />
                         </td>
                         <td class="py-2.5 text-center">
                           <USwitch
                             :model-value="Boolean(month.wantOverrides?.[want.id]?.disabled)"
-                            @update:model-value="value => budgetStore.setWantOverride(selectedMonthId, want.id, { disabled: Boolean(value) })"
+                            @update:model-value="value => budgetStore.setWantOverride(validatedMonthId, want.id, { disabled: Boolean(value) })"
                           />
                         </td>
                         <td class="py-2.5 text-right text-highlighted font-medium whitespace-nowrap">
@@ -601,7 +616,7 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
                             color="neutral"
                             variant="ghost"
                             icon="i-lucide-rotate-ccw"
-                            @click="budgetStore.clearWantOverride(selectedMonthId, want.id)"
+                            @click="budgetStore.clearWantOverride(validatedMonthId, want.id)"
                           />
                         </td>
                       </tr>
