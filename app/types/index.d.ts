@@ -170,7 +170,7 @@ export interface FinanceTransactionPayload {
 export interface FinanceEntry {
   id: string
   timestamp: string
-  data: Record<string, unknown> | { transactions?: FinanceTransactionPayload[] } | FinanceTransactionPayload[]
+  data: { transactions?: FinanceTransactionPayload[] } | FinanceTransactionPayload[]
 }
 
 export interface TransactionRow {
