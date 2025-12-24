@@ -38,8 +38,9 @@ export function useBudgetMonthTabs(options: UseBudgetMonthTabsOptions = {}) {
     return result.data
   })
 
-  const previousMonthId = computed(() => format(subMonths(new Date(`${validatedMonthId.value}-01T00:00:00`), 1), 'yyyy-MM'))
-  const previousMonthLabel = computed(() => format(subMonths(new Date(`${validatedMonthId.value}-01T00:00:00`), 1), 'MMM'))
+  const previousMonthDate = computed(() => subMonths(new Date(`${validatedMonthId.value}-01T00:00:00`), 1))
+  const previousMonthId = computed(() => format(previousMonthDate.value, 'yyyy-MM'))
+  const previousMonthLabel = computed(() => format(previousMonthDate.value, 'MMM'))
 
   const refreshNow = () => {
     now.value = new Date()

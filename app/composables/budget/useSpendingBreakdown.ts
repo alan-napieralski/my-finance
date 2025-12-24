@@ -14,6 +14,13 @@ type UseSpendingBreakdownParams = {
   previousMonthId: ComputedRef<string>
 }
 
+/**
+ * Derives the start and end Date objects for a given month.
+ *
+ * Note: monthId must be in the `YYYY-MM` format. Callers are expected
+ * to validate this (e.g. via monthIdSchema in useBudgetMonthTabs) before
+ * passing it here.
+ */
 const resolveCategoryKey = (value: string): string => {
   const key = value.trim().toLowerCase()
   return key || 'uncategorized'
