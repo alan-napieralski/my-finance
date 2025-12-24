@@ -2,6 +2,30 @@
 import type { MainCategorySummary, SubcategorySummary } from '~/types'
 import { formatCurrency } from '~/utils/currency'
 
+const getMomChangeColorClass = (change: number) => {
+  if (change < 0) return 'text-success'
+  if (change > 0) return 'text-error'
+  return 'text-muted'
+}
+
+const getMomChangeIconName = (change: number): string | null => {
+  if (change === 0) return null
+  return change > 0 ? 'i-lucide-trending-up' : 'i-lucide-trending-down'
+}
+
+const getMomChangeLabel = (change: number, percent: number | null, actual: number, previous: number): string => {
+  if (percent !== null) {
+    const sign = change > 0 ? '+' : ''
+    return `${sign}${percent}%`
+  }
+
+  if (actual > 0 && previous === 0) {
+    return 'New'
+  }
+
+  return ''
+}
+
 defineProps<{
   fetchError: unknown
   previousMonthLabel: string
@@ -47,22 +71,14 @@ defineProps<{
             <div class="text-xs whitespace-nowrap">
               <span
                 class="inline-flex items-center gap-1 font-medium"
-                :class="{
-                  'text-success': row.momChange < 0,
-                  'text-error': row.momChange > 0,
-                  'text-muted': row.momChange === 0
-                }"
+                :class="getMomChangeColorClass(row.momChange)"
               >
                 <UIcon
-                  v-if="row.momChange !== 0"
-                  :name="row.momChange > 0 ? 'i-lucide-trending-up' : 'i-lucide-trending-down'"
+                  v-if="getMomChangeIconName(row.momChange)"
+                  :name="getMomChangeIconName(row.momChange) ?? ''"
                   class="size-3.5"
                 />
-                <template v-if="row.momChangePercent !== null">
-                  {{ row.momChange > 0 ? '+' : '' }}{{ row.momChangePercent }}%
-                </template>
-                <template v-else-if="row.actual > 0 && row.previousMonth === 0">New</template>
-                <template v-else>—</template>
+                {{ getMomChangeLabel(row.momChange, row.momChangePercent, row.actual, row.previousMonth) || '—' }}
               </span>
             </div>
           </div>
@@ -105,22 +121,14 @@ defineProps<{
               <td class="py-2.5 text-right whitespace-nowrap">
                 <span
                   class="inline-flex items-center gap-1 font-medium"
-                  :class="{
-                    'text-success': row.momChange < 0,
-                    'text-error': row.momChange > 0,
-                    'text-muted': row.momChange === 0
-                  }"
+                  :class="getMomChangeColorClass(row.momChange)"
                 >
                   <UIcon
-                    v-if="row.momChange !== 0"
-                    :name="row.momChange > 0 ? 'i-lucide-trending-up' : 'i-lucide-trending-down'"
+                    v-if="getMomChangeIconName(row.momChange)"
+                    :name="getMomChangeIconName(row.momChange) ?? ''"
                     class="size-3.5"
                   />
-                  <template v-if="row.momChangePercent !== null">
-                    {{ row.momChange > 0 ? '+' : '' }}{{ row.momChangePercent }}%
-                  </template>
-                  <template v-else-if="row.actual > 0 && row.previousMonth === 0">New</template>
-                  <template v-else>—</template>
+                  {{ getMomChangeLabel(row.momChange, row.momChangePercent, row.actual, row.previousMonth) || '—' }}
                 </span>
               </td>
             </tr>
@@ -169,22 +177,14 @@ defineProps<{
             <div class="text-xs whitespace-nowrap">
               <span
                 class="inline-flex items-center gap-1 font-medium"
-                :class="{
-                  'text-success': row.momChange < 0,
-                  'text-error': row.momChange > 0,
-                  'text-muted': row.momChange === 0
-                }"
+                :class="getMomChangeColorClass(row.momChange)"
               >
                 <UIcon
-                  v-if="row.momChange !== 0"
-                  :name="row.momChange > 0 ? 'i-lucide-trending-up' : 'i-lucide-trending-down'"
+                  v-if="getMomChangeIconName(row.momChange)"
+                  :name="getMomChangeIconName(row.momChange) ?? ''"
                   class="size-3.5"
                 />
-                <template v-if="row.momChangePercent !== null">
-                  {{ row.momChange > 0 ? '+' : '' }}{{ row.momChangePercent }}%
-                </template>
-                <template v-else-if="row.actual > 0 && row.previousMonth === 0">New</template>
-                <template v-else>—</template>
+                {{ getMomChangeLabel(row.momChange, row.momChangePercent, row.actual, row.previousMonth) || '—' }}
               </span>
             </div>
           </div>
@@ -233,22 +233,14 @@ defineProps<{
               <td class="py-2 text-right whitespace-nowrap">
                 <span
                   class="inline-flex items-center gap-1 font-medium"
-                  :class="{
-                    'text-success': row.momChange < 0,
-                    'text-error': row.momChange > 0,
-                    'text-muted': row.momChange === 0
-                  }"
+                  :class="getMomChangeColorClass(row.momChange)"
                 >
                   <UIcon
-                    v-if="row.momChange !== 0"
-                    :name="row.momChange > 0 ? 'i-lucide-trending-up' : 'i-lucide-trending-down'"
+                    v-if="getMomChangeIconName(row.momChange)"
+                    :name="getMomChangeIconName(row.momChange) ?? ''"
                     class="size-3.5"
                   />
-                  <template v-if="row.momChangePercent !== null">
-                    {{ row.momChange > 0 ? '+' : '' }}{{ row.momChangePercent }}%
-                  </template>
-                  <template v-else-if="row.actual > 0 && row.previousMonth === 0">New</template>
-                  <template v-else>—</template>
+                  {{ getMomChangeLabel(row.momChange, row.momChangePercent, row.actual, row.previousMonth) || '—' }}
                 </span>
               </td>
             </tr>
