@@ -12,6 +12,13 @@ export type ParsedFinanceTransaction = {
   description?: string
 }
 
+/**
+ * Attempts to coerce a value into a finite number.
+ *
+ * Returns `null` when the value cannot be safely parsed as a finite number.
+ * Callers are expected to handle this case (e.g. by throwing a descriptive
+ * error or falling back), which helps avoid silent parsing issues.
+ */
 const toNumber = (value: unknown): number | null => {
   const parsed = typeof value === 'string'
     ? Number.parseFloat(value)
