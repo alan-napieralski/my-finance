@@ -1,10 +1,12 @@
 <script setup lang="ts">
+import type { TransactionRow, TransactionsResponse } from '~/types'
 import { useBudgetMonthTabs } from '~/composables/budget/useBudgetMonthTabs'
 import { useSpendingBreakdown } from '~/composables/budget/useSpendingBreakdown'
-import { useFinanceLatestEntry } from '~/composables/finance/useFinanceLatestEntry'
+import { useTransactionsApi } from '~/composables/finance/useTransactionsApi'
 import { useBudgetStore } from '~/stores/budget'
 import { formatCurrency } from '~/utils/currency'
-import { toBudgetTransactions } from '~/utils/finance/transactions'
+import { getMonthRange } from '~/utils/dateRanges'
+import { toBudgetTransactionsFromRows } from '~/utils/finance/transactions'
 
 const budgetStore = useBudgetStore()
 
@@ -22,15 +24,31 @@ const plannedIncomeTotal = computed(() => {
   return month.value.income.reduce((sum, line) => sum + (line.amount || 0), 0)
 })
 
-const { data: latestEntry, error: fetchError } = await useFinanceLatestEntry('finance-latest')
+const { fetchTransactions } = useTransactionsApi()
+
+const monthRange = computed(() => getMonthRange(validatedMonthId.value))
+const previousRange = computed(() => getMonthRange(previousMonthId.value))
+
+const transactionsRange = computed(() => ({
+  start: previousRange.value.start,
+  end: monthRange.value.end
+}))
+
+const { data: transactionRows, error: fetchError } = await useAsyncData<TransactionRow[]>('budget-transactions', async () => {
+  const response: TransactionsResponse = await fetchTransactions(transactionsRange.value)
+  return response.data
+}, {
+  watch: [validatedMonthId, previousMonthId],
+  default: () => []
+})
 
 watch(fetchError, (error) => {
   if (error) {
-    console.error('[HomeBudgetPlanner] Failed to fetch finance data:', error)
+    console.error('[HomeBudgetPlanner] Failed to fetch transactions:', error)
   }
 })
 
-const allTransactions = computed(() => toBudgetTransactions(latestEntry.value))
+const allTransactions = computed(() => toBudgetTransactionsFromRows(transactionRows.value))
 
 const {
   actualIncome,

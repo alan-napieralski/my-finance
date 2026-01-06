@@ -106,6 +106,15 @@ export function toBudgetTransactions(entry: FinanceEntry | null): Transaction[] 
   }))
 }
 
+export function toBudgetTransactionsFromRows(rows: TransactionRow[]): Transaction[] {
+  return rows.map(row => ({
+    date: new Date(row.date),
+    amount: row.amount,
+    category: row.category ?? 'Uncategorized',
+    description: row.description ?? ''
+  }))
+}
+
 export function toTransactionRows(entry: FinanceEntry | null): TransactionRow[] {
   return parseFinanceTransactions(entry).map(tx => ({
     id: tx.id,

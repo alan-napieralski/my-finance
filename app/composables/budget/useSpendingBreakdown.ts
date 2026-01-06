@@ -1,12 +1,9 @@
-import { endOfMonth, format, startOfMonth } from 'date-fns'
+import { format } from 'date-fns'
 import type { ComputedRef } from 'vue'
 import type { MainCategorySummary, SubcategorySummary, Transaction } from '~/types'
 import { getMainCategory, mainCategories } from '~/utils/budgetCategories'
-
-type DateRange = {
-  start: Date
-  end: Date
-}
+import type { DateRange } from '~/utils/dateRanges'
+import { getMonthRange } from '~/utils/dateRanges'
 
 type UseSpendingBreakdownParams = {
   transactions: ComputedRef<Transaction[]>
@@ -14,22 +11,9 @@ type UseSpendingBreakdownParams = {
   previousMonthId: ComputedRef<string>
 }
 
-/**
- * Derives the start and end Date objects for a given month.
- *
- * Note: monthId must be in the `YYYY-MM` format. Callers are expected
- * to validate this (e.g. via monthIdSchema in useBudgetMonthTabs) before
- * passing it here.
- */
 const resolveCategoryKey = (value: string): string => {
   const key = value.trim().toLowerCase()
   return key || 'uncategorized'
-}
-
-const getMonthRange = (monthId: string): DateRange => {
-  const start = startOfMonth(new Date(`${monthId}-01T00:00:00`))
-  const end = endOfMonth(start)
-  return { start, end }
 }
 
 export function useSpendingBreakdown({ transactions, monthId, previousMonthId }: UseSpendingBreakdownParams) {
