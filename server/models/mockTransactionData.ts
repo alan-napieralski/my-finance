@@ -1,358 +1,197 @@
 import type { FinanceTransactionPayload } from '~/types'
 
-const transactionPayloadMock: FinanceTransactionPayload[] = [
-  {
-    id: '1',
-    date: '2024-12-01',
-    amount: 200.00,
-    category: 'bills',
-    description: 'Electricity bill'
-  },
-  {
-    id: '2',
-    date: '2024-12-10',
-    amount: 120.00,
-    category: 'subscriptions',
-    description: 'Netflix subscription'
-  },
-  {
-    id: '3',
-    date: '2024-12-15',
-    amount: 80.00,
-    category: 'groceries',
-    description: 'Weekly grocery shopping'
-  },
-  {
-    id: '4',
-    date: '2024-12-20',
-    amount: 50.00,
-    category: 'transport',
-    description: 'Fuel for car'
-  },
-  {
-    id: '5',
-    date: '2024-12-25',
-    amount: 30.00,
-    category: 'recurring',
-    description: 'Monthly gym membership'
-  },
-  {
-    id: '6',
-    date: '2024-12-30',
-    amount: 60.00,
-    category: 'eating out',
-    description: 'Dinner at restaurant'
-  },
-  {
-    id: '7',
-    date: '2025-01-05',
-    amount: 120.00,
-    category: 'sport and hobbies',
-    description: 'Table tennis club membership'
-  },
-  {
-    id: '8',
-    date: '2025-01-10',
-    amount: 150.00,
-    category: 'shopping',
-    description: 'New backpack purchase'
-  },
-  {
-    id: '9',
-    date: '2025-01-15',
-    amount: 180.00,
-    category: 'bills',
-    description: 'Internet bill'
-  },
-  {
-    id: '10',
-    date: '2025-01-20',
-    amount: 90.00,
-    category: 'groceries',
-    description: 'Weekly grocery shopping'
-  },
-  {
-    id: '11',
-    date: '2025-01-25',
-    amount: 40.00,
-    category: 'transport',
-    description: 'Public transport pass'
-  },
-  {
-    id: '12',
-    date: '2025-01-30',
-    amount: 70.00,
-    category: 'eating out',
-    description: 'Lunch with colleague'
-  },
-  {
-    id: '13',
-    date: '2025-02-05',
-    amount: 300.00,
-    category: 'savings',
-    description: 'Regular savings deposit'
-  },
-  {
-    id: '14',
-    date: '2025-02-10',
-    amount: 100.00,
-    category: 'subscriptions',
-    description: 'Music streaming service'
-  },
-  {
-    id: '15',
-    date: '2025-02-15',
-    amount: 50.00,
-    category: 'sport and hobbies',
-    description: 'Running shoe purchase'
-  },
-  {
-    id: '16',
-    date: '2025-02-20',
-    amount: 200.00,
-    category: 'shopping',
-    description: 'Phone accessory purchase'
-  },
-  {
-    id: '17',
-    date: '2025-02-25',
-    amount: 120.00,
-    category: 'groceries',
-    description: 'Weekly grocery shopping'
-  },
-  {
-    id: '18',
-    date: '2025-02-28',
-    amount: 80.00,
-    category: 'transport',
-    description: 'Fuel for car'
-  },
-  {
-    id: '19',
-    date: '2025-03-05',
-    amount: 150.00,
-    category: 'eating out',
-    description: 'Dinner at Italian restaurant'
-  },
-  {
-    id: '20',
-    date: '2025-03-10',
-    amount: 200.00,
-    category: 'bills',
-    description: 'Water bill'
-  },
-  {
-    id: '21',
-    date: '2025-03-15',
-    amount: 70.00,
-    category: 'sport and hobbies',
-    description: 'Yoga class subscription'
-  },
-  {
-    id: '22',
-    date: '2025-03-20',
-    amount: 180.00,
-    category: 'shopping',
-    description: 'New laptop purchase'
-  },
-  {
-    id: '23',
-    date: '2025-03-25',
-    amount: 250.00,
-    category: 'savings',
-    description: 'Holiday savings deposit'
-  },
-  {
-    id: '24',
-    date: '2025-03-30',
-    amount: 90.00,
-    category: 'groceries',
-    description: 'Weekly grocery shopping'
-  },
-  {
-    id: '25',
-    date: '2025-04-01',
-    amount: 60.00,
-    category: 'transport',
-    description: 'Fuel for car'
-  },
-  {
-    id: '26',
-    date: '2025-04-05',
-    amount: 100.00,
-    category: 'subscriptions',
-    description: 'Language learning app'
-  },
-  {
-    id: '27',
-    date: '2025-04-10',
-    amount: 50.00,
-    category: 'sport and hobbies',
-    description: 'Gym equipment purchase'
-  },
-  {
-    id: '28',
-    date: '2025-04-15',
-    amount: 120.00,
-    category: 'shopping',
-    description: 'Home decor purchase'
-  },
-  {
-    id: '29',
-    date: '2025-04-20',
-    amount: 200.00,
-    category: 'groceries',
-    description: 'Weekly grocery shopping'
-  },
-  {
-    id: '30',
-    date: '2025-04-25',
-    amount: 70.00,
-    category: 'transport',
-    description: 'Public transport pass'
-  },
-  {
-    id: '31',
-    date: '2025-04-30',
-    amount: 90.00,
-    category: 'eating out',
-    description: 'Lunch at cafe'
-  },
-  {
-    id: '32',
-    date: '2025-05-05',
-    amount: 300.00,
-    category: 'bills',
-    description: 'Utility bill'
-  },
-  {
-    id: '33',
-    date: '2025-05-10',
-    amount: 150.00,
-    category: 'savings',
-    description: 'Emergency fund deposit'
-  },
-  {
-    id: '34',
-    date: '2025-05-15',
-    amount: 80.00,
-    category: 'sport and hobbies',
-    description: 'Hiking gear purchase'
-  },
-  {
-    id: '35',
-    date: '2025-05-20',
-    amount: 180.00,
-    category: 'shopping',
-    description: 'Books purchase'
-  },
-  {
-    id: '36',
-    date: '2025-05-25',
-    amount: 120.00,
-    category: 'groceries',
-    description: 'Weekly grocery shopping'
-  },
-  {
-    id: '37',
-    date: '2025-05-30',
-    amount: 60.00,
-    category: 'transport',
-    description: 'Fuel for car'
-  },
-  {
-    id: '38',
-    date: '2025-06-05',
-    amount: 100.00,
-    category: 'subscriptions',
-    description: 'Online course'
-  },
-  {
-    id: '39',
-    date: '2025-06-10',
-    amount: 150.00,
-    category: 'sport and hobbies',
-    description: 'Cycling gear purchase'
-  },
-  {
-    id: '40',
-    date: '2025-06-15',
-    amount: 90.00,
-    category: 'shopping',
-    description: 'Tech accessories purchase'
-  },
-  {
-    id: '41',
-    date: '2025-06-20',
-    amount: 200.00,
-    category: 'groceries',
-    description: 'Weekly grocery shopping'
-  },
-  {
-    id: '42',
-    date: '2025-06-25',
-    amount: 70.00,
-    category: 'transport',
-    description: 'Public transport pass'
-  },
-  {
-    id: '43',
-    date: '2025-06-30',
-    amount: 120.00,
-    category: 'eating out',
-    description: 'Dinner at seafood restaurant'
-  },
-  {
-    id: '44',
-    date: '2025-07-05',
-    amount: 300.00,
-    category: 'bills',
-    description: 'Internet and mobile bill'
-  },
-  {
-    id: '45',
-    date: '2025-07-10',
-    amount: 150.00,
-    category: 'savings',
-    description: 'Annual savings goal'
-  },
-  {
-    id: '46',
-    date: '2025-07-15',
-    amount: 80.00,
-    category: 'sport and hobbies',
-    description: 'Gym equipment purchase'
-  },
-  {
-    id: '47',
-    date: '2025-07-20',
-    amount: 180.00,
-    category: 'shopping',
-    description: 'Home electronics purchase'
-  },
-  {
-    id: '48',
-    date: '2025-07-25',
-    amount: 120.00,
-    category: 'groceries',
-    description: 'Weekly grocery shopping'
-  },
-  {
-    id: '49',
-    date: '2025-07-30',
-    amount: 60.00,
-    category: 'transport',
-    description: 'Fuel for car'
-  },
-  {
-    id: '50',
-    date: '2025-08-05',
-    amount: 100.00,
-    category: 'subscriptions',
-    description: 'Streaming platform'
-  }
-]
+type MockFinanceDataOptions = {
+  now?: Date
+  monthsBack?: number
+}
 
-export {
-  transactionPayloadMock
+type Rng = () => number
+
+const hashStringToSeed = (value: string): number => {
+  // FNV-1a (32-bit)
+  let hash = 2166136261
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return hash >>> 0
+}
+
+const mulberry32 = (seed: number): Rng => {
+  let t = seed >>> 0
+  return () => {
+    t += 0x6D2B79F5
+    let r = Math.imul(t ^ (t >>> 15), 1 | t)
+    r ^= r + Math.imul(r ^ (r >>> 7), 61 | r)
+    return ((r ^ (r >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+const randInt = (rng: Rng, min: number, max: number): number => {
+  return Math.floor(rng() * (max - min + 1)) + min
+}
+
+const randMoney = (rng: Rng, min: number, max: number): number => {
+  const value = min + rng() * (max - min)
+  return Math.round(value * 100) / 100
+}
+
+const formatIsoDate = (date: Date): string => date.toISOString().slice(0, 10)
+
+const makeUtcDate = (year: number, monthIndex: number, day: number): Date => {
+  const lastDay = new Date(Date.UTC(year, monthIndex + 1, 0)).getUTCDate()
+  const safeDay = Math.min(Math.max(day, 1), lastDay)
+  return new Date(Date.UTC(year, monthIndex, safeDay))
+}
+
+const pushTx = (
+  list: FinanceTransactionPayload[],
+  payload: Omit<FinanceTransactionPayload, 'id'> & { id: string }
+) => {
+  list.push(payload)
+}
+
+/**
+ * Generates a deterministic but realistic-looking set of transactions.
+ *
+ * - Dates are generated relative to `now`
+ * - Expenses are negative, income is positive
+ * - Each month includes a stable mix of categories so MoM comparisons aren’t dominated by £0 rows
+ */
+export function buildMockFinanceTransactions(options: MockFinanceDataOptions = {}): FinanceTransactionPayload[] {
+  const now = options.now ?? new Date()
+  const monthsBack = options.monthsBack ?? 12
+
+  const transactions: FinanceTransactionPayload[] = []
+
+  for (let offset = 0; offset < monthsBack; offset++) {
+    const monthDate = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - offset, 1))
+    const year = monthDate.getUTCFullYear()
+    const monthIndex = monthDate.getUTCMonth()
+    const monthId = `${year}-${String(monthIndex + 1).padStart(2, '0')}`
+
+    const rng = mulberry32(hashStringToSeed(monthId))
+
+    // Income (salary)
+    pushTx(transactions, {
+      id: `${monthId}-income-salary`,
+      date: formatIsoDate(makeUtcDate(year, monthIndex, 1)),
+      amount: randMoney(rng, 2800, 3800),
+      category: 'income',
+      description: 'Salary'
+    })
+
+    // Bills
+    pushTx(transactions, {
+      id: `${monthId}-bills-rent`,
+      date: formatIsoDate(makeUtcDate(year, monthIndex, 2)),
+      amount: -randMoney(rng, 900, 1400),
+      category: 'bills',
+      description: 'Rent'
+    })
+
+    pushTx(transactions, {
+      id: `${monthId}-bills-utilities`,
+      date: formatIsoDate(makeUtcDate(year, monthIndex, 14)),
+      amount: -randMoney(rng, 90, 220),
+      category: 'bills',
+      description: 'Utilities'
+    })
+
+    // Subscriptions
+    pushTx(transactions, {
+      id: `${monthId}-subscriptions-phone`,
+      date: formatIsoDate(makeUtcDate(year, monthIndex, 6)),
+      amount: -randMoney(rng, 12, 45),
+      category: 'subscriptions',
+      description: 'Mobile plan'
+    })
+
+    pushTx(transactions, {
+      id: `${monthId}-subscriptions-streaming`,
+      date: formatIsoDate(makeUtcDate(year, monthIndex, 9)),
+      amount: -randMoney(rng, 8, 20),
+      category: 'subscriptions',
+      description: 'Streaming subscription'
+    })
+
+    // Groceries (weekly-ish)
+    const groceryCount = randInt(rng, 4, 6)
+    for (let i = 0; i < groceryCount; i++) {
+      pushTx(transactions, {
+        id: `${monthId}-groceries-${i + 1}`,
+        date: formatIsoDate(makeUtcDate(year, monthIndex, 3 + i * 6)),
+        amount: -randMoney(rng, 35, 110),
+        category: 'groceries',
+        description: 'Groceries'
+      })
+    }
+
+    // Transport (mix of pass/fuel)
+    pushTx(transactions, {
+      id: `${monthId}-transport-pass`,
+      date: formatIsoDate(makeUtcDate(year, monthIndex, 4)),
+      amount: -randMoney(rng, 45, 120),
+      category: 'transport',
+      description: 'Transport'
+    })
+
+    // Eating out
+    const eatingOutCount = randInt(rng, 2, 5)
+    for (let i = 0; i < eatingOutCount; i++) {
+      pushTx(transactions, {
+        id: `${monthId}-eating-out-${i + 1}`,
+        date: formatIsoDate(makeUtcDate(year, monthIndex, 5 + i * 5)),
+        amount: -randMoney(rng, 12, 75),
+        category: 'eating out',
+        description: 'Eating out'
+      })
+    }
+
+    // Recurring (e.g. gym)
+    pushTx(transactions, {
+      id: `${monthId}-recurring-gym`,
+      date: formatIsoDate(makeUtcDate(year, monthIndex, 7)),
+      amount: -randMoney(rng, 18, 55),
+      category: 'recurring',
+      description: 'Gym membership'
+    })
+
+    // Sport and hobbies
+    pushTx(transactions, {
+      id: `${monthId}-hobbies`,
+      date: formatIsoDate(makeUtcDate(year, monthIndex, 16)),
+      amount: -randMoney(rng, 10, 80),
+      category: 'sport and hobbies',
+      description: 'Sport & hobbies'
+    })
+
+    // Shopping (0–2 per month)
+    const shoppingCount = randInt(rng, 0, 2)
+    for (let i = 0; i < shoppingCount; i++) {
+      pushTx(transactions, {
+        id: `${monthId}-shopping-${i + 1}`,
+        date: formatIsoDate(makeUtcDate(year, monthIndex, 11 + i * 10)),
+        amount: -randMoney(rng, 25, i === 0 ? 220 : 140),
+        category: 'shopping',
+        description: 'Shopping'
+      })
+    }
+
+    // Savings (treat as an outflow so it shows up under the Savings main category)
+    pushTx(transactions, {
+      id: `${monthId}-savings`,
+      date: formatIsoDate(makeUtcDate(year, monthIndex, 20)),
+      amount: -randMoney(rng, 100, 600),
+      category: 'savings',
+      description: 'Savings transfer'
+    })
+  }
+
+  // Oldest -> newest
+  transactions.sort((a, b) => {
+    return new Date(a.date).getTime() - new Date(b.date).getTime()
+  })
+
+  return transactions
 }
