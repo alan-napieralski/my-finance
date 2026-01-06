@@ -1,13 +1,6 @@
 import { createError } from 'h3'
 import { z } from 'zod'
-import type { FinanceTransactionPayload } from '~/types'
-
-type FinanceIngestRequest = {
-  sourceSystem: string
-  sourceAccount?: string
-  transactions: FinanceTransactionPayload[]
-  meta?: Record<string, unknown>
-}
+import type { FinanceIngestRequest, FinanceTransactionPayload } from '~/types'
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
@@ -65,7 +58,22 @@ export function parseFinanceIngestBody(body: unknown): FinanceIngestRequest {
     description: z.string().optional()
   }).passthrough()
 
-  const parsedTransactions = z.array(txSchema).parse(transactions)
+  let parsedTransactions: FinanceTransactionPayload[]
+
+  try {
+    parsedTransactions = z.array(txSchema).parse(transactions)
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      const issue = error.issues[0]
+      const message = issue?.message ?? error.message
+      throw createError({
+        statusCode: 400,
+        statusMessage: `Bad Request: invalid transaction payload. ${message}`
+      })
+    }
+
+    throw error
+  }
 
   const meta = isRecord(body)
     ? omitKeys(record, ['transactions', 'body', 'source_system', 'sourceSystem', 'source_account', 'sourceAccount'])

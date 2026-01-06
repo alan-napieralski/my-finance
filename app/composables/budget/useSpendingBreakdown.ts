@@ -1,8 +1,7 @@
-import { format } from 'date-fns'
 import type { ComputedRef } from 'vue'
-import type { MainCategorySummary, SubcategorySummary, Transaction } from '~/types'
+import type { MainCategory, MainCategorySummary, Range, SubcategorySummary, Transaction } from '~/types'
+import { monthIdSchema } from '~/types/budget'
 import { getMainCategory, mainCategories } from '~/utils/budgetCategories'
-import type { DateRange } from '~/utils/dateRanges'
 import { getMonthRange } from '~/utils/dateRanges'
 
 type UseSpendingBreakdownParams = {
@@ -36,7 +35,7 @@ export function useSpendingBreakdown({ transactions, monthId, previousMonthId }:
 
   const actualNet = computed(() => actualIncome.value - actualSpent.value)
 
-  const buildActualByCategoryForRange = (range: DateRange) => {
+  const buildActualByCategoryForRange = (range: Range) => {
     const buckets = new Map<string, number>()
 
     for (const tx of transactions.value) {
@@ -85,34 +84,54 @@ export function useSpendingBreakdown({ transactions, monthId, previousMonthId }:
       .sort((a, b) => b.actual - a.actual)
   })
 
+  const totalsByMainCategory = computed(() => {
+    const totals = new Map<MainCategory, { actual: number, previousMonth: number }>()
+
+    for (const mainCategory of mainCategories) {
+      totals.set(mainCategory, { actual: 0, previousMonth: 0 })
+    }
+
+    for (const row of subcategoryBreakdown.value) {
+      const entry = totals.get(row.mainCategory)
+      if (!entry) continue
+      entry.actual += row.actual
+      entry.previousMonth += row.previousMonth
+    }
+
+    return totals
+  })
+
   const mainCategoryBreakdown = computed<MainCategorySummary[]>(() => {
     return mainCategories.map((mainCategory) => {
-      const actual = subcategoryBreakdown.value
-        .filter(s => s.mainCategory === mainCategory)
-        .reduce((sum, s) => sum + s.actual, 0)
-
-      const previousMonth = subcategoryBreakdown.value
-        .filter(s => s.mainCategory === mainCategory)
-        .reduce((sum, s) => sum + s.previousMonth, 0)
-
-      const momChange = actual - previousMonth
+      const totals = totalsByMainCategory.value.get(mainCategory) ?? { actual: 0, previousMonth: 0 }
+      const momChange = totals.actual - totals.previousMonth
 
       let momChangePercent: number | null = null
-      if (previousMonth > 0) {
-        momChangePercent = Math.round((momChange / previousMonth) * 100)
+      if (totals.previousMonth > 0) {
+        momChangePercent = Math.round((momChange / totals.previousMonth) * 100)
       }
 
       return {
         mainCategory,
-        actual,
-        previousMonth,
+        actual: totals.actual,
+        previousMonth: totals.previousMonth,
         momChange,
         momChangePercent
       }
     })
   })
 
-  const monthTitle = computed(() => format(new Date(`${monthId.value}-01T00:00:00`), 'MMM yyyy'))
+  const monthTitle = computed(() => {
+    const validated = monthIdSchema.parse(monthId.value)
+    const [yearRaw, monthRaw] = validated.split('-')
+    const year = Number(yearRaw)
+    const monthIndex = Number(monthRaw) - 1
+
+    const labels = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+    const monthLabel = labels[monthIndex] ?? String(monthRaw)
+
+    return `${monthLabel} ${year}`
+  })
 
   return {
     monthRange,

@@ -31,6 +31,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS transactions_source_fingerprint_uq
 CREATE INDEX IF NOT EXISTS transactions_posted_on_idx
   ON transactions (posted_on DESC);
 
+-- Helps common filtering patterns: date range + optional source filters.
+CREATE INDEX IF NOT EXISTS transactions_source_account_posted_on_idx
+  ON transactions (source_system, source_account, posted_on DESC, id DESC);
+
 CREATE INDEX IF NOT EXISTS transactions_source_system_idx
   ON transactions (source_system);
 

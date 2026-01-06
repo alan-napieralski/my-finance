@@ -19,7 +19,8 @@ const toFiniteNumber = (value: unknown): number | null => {
 }
 
 const roundMoney = (value: number): number => {
-  return Math.round(value * 100) / 100
+  // Reduce IEEE-754 rounding surprises for common decimal inputs.
+  return Math.round((value + Number.EPSILON) * 100) / 100
 }
 
 const toMoneyString = (value: number): string => {

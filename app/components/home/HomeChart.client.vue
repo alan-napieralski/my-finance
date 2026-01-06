@@ -79,7 +79,9 @@ const buildChartData = () => {
 }
 
 onMounted(() => {
-  // Poll to pick up newly ingested transactions without a manual reload.
+  // Initial load + polling to pick up newly ingested transactions without a manual reload.
+  loadTransactions()
+
   pollId = window.setInterval(() => {
     loadTransactions()
   }, POLL_INTERVAL_MS)
@@ -94,7 +96,7 @@ onUnmounted(() => {
 
 watch([() => props.range.start, () => props.range.end], async () => {
   await loadTransactions()
-}, { immediate: true })
+})
 
 watch([() => props.period, transactions], () => {
   buildChartData()

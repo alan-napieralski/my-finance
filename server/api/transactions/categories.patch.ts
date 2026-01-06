@@ -62,6 +62,8 @@ export default eventHandler(async (event) => {
 
   const updates = parsed.data.updates.map((update) => {
     const trimmed = typeof update.category === 'string' ? update.category.trim() : null
+
+    // Normalize empty/whitespace-only categories to null so "Uncategorized" round-trips cleanly.
     return {
       id: update.id,
       category: trimmed ? trimmed : null

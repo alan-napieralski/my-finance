@@ -5,6 +5,8 @@ export * from './budget'
 export * from './finance'
 export * from './plans'
 
+export type FetchResult<T> = { data: T, error: null } | { data: null, error: unknown }
+
 export type UserStatus = 'subscribed' | 'unsubscribed' | 'bounced'
 export type SaleStatus = 'paid' | 'failed' | 'refunded'
 

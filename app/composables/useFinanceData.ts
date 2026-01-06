@@ -1,6 +1,4 @@
-import type { FinanceEntry } from '~/types'
-
-type FetchResult<T> = { data: T, error: null } | { data: null, error: unknown }
+import type { FetchResult, FinanceEntry } from '~/types'
 
 export const useFinanceData = () => {
   // Fetch latest finance data
@@ -13,10 +11,12 @@ export const useFinanceData = () => {
     }
   }
 
+  type FinanceEntriesResponse = { count: number, data: FinanceEntry[] }
+
   // Fetch all finance data with optional limit
-  const fetchAll = async (limit = 50) => {
+  const fetchAll = async (limit = 50): Promise<FetchResult<FinanceEntriesResponse>> => {
     try {
-      const data = await $fetch(`/api/finance`, { query: { limit } })
+      const data = await $fetch<FinanceEntriesResponse>('/api/finance', { query: { limit } })
       return { data, error: null }
     } catch (err) {
       return { data: null, error: err }

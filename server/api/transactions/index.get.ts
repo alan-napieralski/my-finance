@@ -1,14 +1,6 @@
 import type { TransactionRow } from '~/types'
+import type { DbTransactionRow } from '../../types/transactions'
 import { withPgClient } from '../../utils/db'
-
-type DbTransactionRow = {
-  id: string
-  posted_on: string
-  description: string
-  category: string | null
-  amount: string
-  balance: string | null
-}
 
 const firstQueryValue = (value: unknown): string | undefined => {
   if (Array.isArray(value)) {

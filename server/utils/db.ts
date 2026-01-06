@@ -47,10 +47,20 @@ export function getPgPool(): PgPool {
     })
   }
 
+  const ssl = resolveSsl(databaseUrl)
+
+  if (process.env.NODE_ENV === 'production' && ssl?.rejectUnauthorized === false) {
+    console.warn('[db] SSL is enabled with rejectUnauthorized=false (certificate validation disabled).')
+  }
+
+  const rawMax = process.env.PGPOOL_MAX
+  const parsedMax = rawMax == null ? NaN : Number.parseInt(rawMax, 10)
+  const max = Number.isFinite(parsedMax) && parsedMax > 0 ? parsedMax : 10
+
   pool = new PgPool({
     connectionString: databaseUrl,
-    ssl: resolveSsl(databaseUrl),
-    max: Number(process.env.PGPOOL_MAX ?? 10)
+    ssl,
+    max
   })
 
   globalForPg.__myFinancePgPool = pool

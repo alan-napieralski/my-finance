@@ -1,17 +1,23 @@
-import { endOfMonth, startOfMonth } from 'date-fns'
-
-export type DateRange = {
-  start: Date
-  end: Date
-}
+import type { Range } from '~/types'
+import { monthIdSchema } from '~/types/budget'
 
 /**
- * Returns the start/end range for a given month.
- *
- * Note: monthId must be in `YYYY-MM` format (callers should validate).
+ * Returns the UTC start/end range for a given monthId (YYYY-MM).
  */
-export const getMonthRange = (monthId: string): DateRange => {
-  const start = startOfMonth(new Date(`${monthId}-01T00:00:00`))
-  const end = endOfMonth(start)
+export const getMonthRange = (monthId: string): Range => {
+  const result = monthIdSchema.safeParse(monthId)
+  if (!result.success) {
+    const message = result.error.issues[0]?.message ?? result.error.message
+    throw new Error(`[dateRanges] Invalid monthId: ${String(monthId)}. ${message}`)
+  }
+
+  const [yearRaw, monthRaw] = result.data.split('-')
+
+  const year = Number(yearRaw)
+  const monthIndex = Number(monthRaw) - 1
+
+  const start = new Date(Date.UTC(year, monthIndex, 1, 0, 0, 0, 0))
+  const end = new Date(Date.UTC(year, monthIndex + 1, 0, 23, 59, 59, 999))
+
   return { start, end }
 }

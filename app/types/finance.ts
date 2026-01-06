@@ -7,6 +7,19 @@ export interface FinanceTransactionPayload {
   description?: string
 }
 
+export type FinanceIngestRequest = {
+  sourceSystem: string
+  sourceAccount?: string
+  transactions: FinanceTransactionPayload[]
+  meta?: Record<string, unknown>
+}
+
+export type FetchTransactionsOptions = {
+  limit?: number
+  sourceSystem?: string
+  sourceAccount?: string
+}
+
 export interface FinanceEntry {
   id: string
   timestamp: string

@@ -1,11 +1,5 @@
 import { format } from 'date-fns'
-import type { Range, TransactionsResponse } from '~/types'
-
-export type FetchTransactionsOptions = {
-  limit?: number
-  sourceSystem?: string
-  sourceAccount?: string
-}
+import type { FetchTransactionsOptions, Range, TransactionsResponse } from '~/types'
 
 export const DEFAULT_TRANSACTIONS_LIMIT = 20000
 

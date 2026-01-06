@@ -13,6 +13,8 @@ const props = withDefaults(defineProps<{
   enableCategoryEditing: false
 })
 
+const toast = useToast()
+
 const { fetchTransactions } = useTransactionsApi()
 
 const isEditingCategories = ref(false)
@@ -231,9 +233,15 @@ const saveCategoryChanges = async () => {
       }
     })
 
-    await refreshNuxtData('finance-transactions')
-
     exitEditMode()
+  } catch (error) {
+    console.error('[HomeSales] failed to update categories', error)
+
+    toast.add({
+      title: 'Failed to save categories',
+      description: 'Please try again.',
+      color: 'error'
+    })
   } finally {
     isSaving.value = false
   }
@@ -244,6 +252,22 @@ watch([() => props.period, () => props.range], () => {
     exitEditMode()
   }
 })
+
+const USelectMenu = resolveComponent('USelectMenu')
+
+const coerceCategoryValue = (value: unknown): string => {
+  if (typeof value === 'string') {
+    return value
+  }
+
+  if (value && typeof value === 'object' && 'value' in value) {
+    const record = value as Record<string, unknown>
+    const inner = record.value
+    return inner == null ? '' : String(inner)
+  }
+
+  return ''
+}
 
 const columns: TableColumn<TransactionRow>[] = [
   {
@@ -274,24 +298,10 @@ const columns: TableColumn<TransactionRow>[] = [
         return row.getValue('category')
       }
 
-      const USelectMenu = resolveComponent('USelectMenu')
-
       return h(USelectMenu, {
         'modelValue': draftCategoryById.value[id] ?? '',
         'onUpdate:modelValue': (value: unknown) => {
-          if (typeof value === 'string') {
-            draftCategoryById.value[id] = value
-            return
-          }
-
-          if (value && typeof value === 'object' && 'value' in value) {
-            const record = value as Record<string, unknown>
-            const inner = record.value
-            draftCategoryById.value[id] = inner == null ? '' : String(inner)
-            return
-          }
-
-          draftCategoryById.value[id] = ''
+          draftCategoryById.value[id] = coerceCategoryValue(value)
         },
         'items': editCategoryItems.value,
         'searchable': true,
