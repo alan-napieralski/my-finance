@@ -1,15 +1,49 @@
 <script setup lang="ts">
-import { h } from 'vue'
+import { h, resolveComponent } from 'vue'
 import type { TableColumn } from '@nuxt/ui'
 import type { Period, Range, TransactionRow, SortField, SortDirection, TransactionsResponse } from '~/types'
 import { useTransactionsApi } from '~/composables/finance/useTransactionsApi'
+import { subcategoryToMainCategory } from '~/utils/budgetCategories'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   period: Period
   range: Range
-}>()
+  enableCategoryEditing?: boolean
+}>(), {
+  enableCategoryEditing: false
+})
 
 const { fetchTransactions } = useTransactionsApi()
+
+const isEditingCategories = ref(false)
+const confirmOpen = ref(false)
+const isSaving = ref(false)
+
+const originalCategoryById = ref<Record<string, string>>({})
+const draftCategoryById = ref<Record<string, string>>({})
+
+const displayCategory = (value: string) => value ? value : 'Uncategorized'
+
+const enterEditMode = () => {
+  const original: Record<string, string> = {}
+  const draft: Record<string, string> = {}
+
+  allTransactions.value.forEach((tx) => {
+    original[tx.id] = tx.category ?? ''
+    draft[tx.id] = tx.category ?? ''
+  })
+
+  originalCategoryById.value = original
+  draftCategoryById.value = draft
+  isEditingCategories.value = true
+}
+
+const exitEditMode = () => {
+  isEditingCategories.value = false
+  confirmOpen.value = false
+  originalCategoryById.value = {}
+  draftCategoryById.value = {}
+}
 
 const searchQuery = ref('')
 const selectedCategories = ref<string[]>([])
@@ -38,6 +72,64 @@ const availableCategories = computed(() => {
     }
   })
   return Array.from(categories).sort()
+})
+
+const editCategoryItems = computed(() => {
+  const items = new Set<string>()
+
+  // Known budget categories
+  Object.keys(subcategoryToMainCategory).forEach((key) => {
+    items.add(key)
+  })
+
+  // Any categories already present in the data
+  availableCategories.value.forEach((key) => {
+    items.add(key)
+  })
+
+  items.delete('uncategorized')
+
+  return [
+    { label: 'Uncategorized', value: '' },
+    ...Array.from(items)
+      .sort()
+      .map(value => ({ label: value, value }))
+  ]
+})
+
+type PendingCategoryChange = {
+  id: string
+  description: string
+  from: string
+  to: string
+}
+
+const transactionById = computed(() => {
+  const map = new Map<string, TransactionRow>()
+  allTransactions.value.forEach((tx) => {
+    map.set(tx.id, tx)
+  })
+  return map
+})
+
+const pendingChanges = computed<PendingCategoryChange[]>(() => {
+  const changes: PendingCategoryChange[] = []
+
+  for (const [id, from] of Object.entries(originalCategoryById.value)) {
+    const to = draftCategoryById.value[id] ?? ''
+
+    if (to !== from) {
+      const tx = transactionById.value.get(id)
+      changes.push({
+        id,
+        description: tx?.description ?? id,
+        from,
+        to
+      })
+    }
+  }
+
+  return changes
 })
 
 const filteredAndSortedData = computed(() => {
@@ -95,6 +187,64 @@ const toggleSort = (field: SortField) => {
 
 const createSortableHeader = useSortableHeader(sortField, sortDirection, toggleSort)
 
+type UpdateCategoriesResponse = {
+  success: boolean
+  updatedCount: number
+  updated: Array<{ id: string, category: string | null }>
+}
+
+const saveCategoryChanges = async () => {
+  if (pendingChanges.value.length === 0) {
+    exitEditMode()
+    return
+  }
+
+  isSaving.value = true
+
+  try {
+    const response = await $fetch<UpdateCategoriesResponse>('/api/transactions/categories', {
+      method: 'PATCH',
+      body: {
+        updates: pendingChanges.value.map(change => ({
+          id: change.id,
+          category: change.to ? change.to : null
+        }))
+      }
+    })
+
+    if (!response.success) {
+      throw new Error('Failed to update categories')
+    }
+
+    const updatedById = new Map(response.updated.map(u => [u.id, u.category]))
+
+    allTransactions.value = allTransactions.value.map((tx) => {
+      if (!updatedById.has(tx.id)) {
+        return tx
+      }
+
+      const category = updatedById.get(tx.id)
+
+      return {
+        ...tx,
+        category: category == null ? undefined : category
+      }
+    })
+
+    await refreshNuxtData('finance-transactions')
+
+    exitEditMode()
+  } finally {
+    isSaving.value = false
+  }
+}
+
+watch([() => props.period, () => props.range], () => {
+  if (isEditingCategories.value) {
+    exitEditMode()
+  }
+})
+
 const columns: TableColumn<TransactionRow>[] = [
   {
     accessorKey: 'date',
@@ -116,7 +266,41 @@ const columns: TableColumn<TransactionRow>[] = [
   },
   {
     accessorKey: 'category',
-    header: 'Category'
+    header: 'Category',
+    cell: ({ row }) => {
+      const id = row.original.id
+
+      if (!props.enableCategoryEditing || !isEditingCategories.value) {
+        return row.getValue('category')
+      }
+
+      const USelectMenu = resolveComponent('USelectMenu')
+
+      return h(USelectMenu, {
+        'modelValue': draftCategoryById.value[id] ?? '',
+        'onUpdate:modelValue': (value: unknown) => {
+          if (typeof value === 'string') {
+            draftCategoryById.value[id] = value
+            return
+          }
+
+          if (value && typeof value === 'object' && 'value' in value) {
+            const record = value as Record<string, unknown>
+            const inner = record.value
+            draftCategoryById.value[id] = inner == null ? '' : String(inner)
+            return
+          }
+
+          draftCategoryById.value[id] = ''
+        },
+        'items': editCategoryItems.value,
+        'searchable': true,
+        'placeholder': 'Category',
+        'class': 'w-full'
+      }, {
+        default: () => displayCategory(draftCategoryById.value[id] ?? '')
+      })
+    }
   },
   {
     accessorKey: 'amount',
@@ -162,6 +346,28 @@ const columns: TableColumn<TransactionRow>[] = [
     <!-- Filters -->
     <UCard>
       <div class="flex flex-col sm:flex-row gap-3">
+        <div v-if="enableCategoryEditing" class="flex items-center justify-end sm:order-2 sm:ml-auto">
+          <UButton
+            v-if="!isEditingCategories"
+            color="neutral"
+            variant="soft"
+            icon="i-lucide-pencil"
+            @click="enterEditMode"
+          >
+            Edit categories
+          </UButton>
+
+          <UButton
+            v-else
+            color="primary"
+            variant="solid"
+            icon="i-lucide-check"
+            :disabled="isSaving"
+            @click="pendingChanges.length > 0 ? (confirmOpen = true) : exitEditMode()"
+          >
+            Done
+          </UButton>
+        </div>
         <UInput
           v-model="searchQuery"
           icon="i-lucide-search"
@@ -212,5 +418,54 @@ const columns: TableColumn<TransactionRow>[] = [
         </div>
       </div>
     </div>
+    <UModal
+      v-model:open="confirmOpen"
+      title="Confirm category changes"
+      :description="`You are about to update ${pendingChanges.length} transaction${pendingChanges.length === 1 ? '' : 's'}.`"
+      :dismissible="!isSaving"
+      :close="!isSaving"
+    >
+      <template #body>
+        <div class="flex flex-col gap-3 text-sm max-h-64 overflow-auto">
+          <div
+            v-for="change in pendingChanges.slice(0, 50)"
+            :key="change.id"
+            class="flex flex-col gap-1"
+          >
+            <p class="truncate">
+              {{ change.description }}
+            </p>
+            <p class="text-xs text-muted truncate">
+              {{ displayCategory(change.from) }} → {{ displayCategory(change.to) }}
+            </p>
+          </div>
+
+          <p v-if="pendingChanges.length > 50" class="text-xs text-muted">
+            Showing first 50 changes.
+          </p>
+        </div>
+      </template>
+
+      <template #footer>
+        <div class="flex items-center justify-end gap-2">
+          <UButton
+            color="neutral"
+            variant="ghost"
+            :disabled="isSaving"
+            @click="confirmOpen = false"
+          >
+            Cancel
+          </UButton>
+          <UButton
+            color="primary"
+            variant="solid"
+            :loading="isSaving"
+            @click="saveCategoryChanges"
+          >
+            Confirm
+          </UButton>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
