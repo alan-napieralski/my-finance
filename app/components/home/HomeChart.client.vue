@@ -74,9 +74,12 @@ const buildChartData = () => {
 const loadLatest = async () => {
   const { data: latest, error } = await fetchLatest()
 
-  if (!error && latest) {
-    latestEntry.value = latest as FinanceEntry
+  if (error) {
+    latestEntry.value = null
+    return
   }
+
+  latestEntry.value = (latest ?? null) as FinanceEntry | null
 }
 
 onMounted(async () => {
