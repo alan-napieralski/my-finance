@@ -21,7 +21,8 @@ export default defineNuxtConfig({
     }
   },
   runtimeConfig: {
-    apiKey: ''
+    apiKey: '',
+    databaseUrl: ''
   },
 
   routeRules: {
