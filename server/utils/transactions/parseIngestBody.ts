@@ -42,16 +42,11 @@ export function parseFinanceIngestBody(body: unknown): FinanceIngestRequest {
     }
   }
 
-  const sourceSystem = String(record.source_system ?? record.sourceSystem ?? '').trim()
+  const sourceSystemRaw = String(record.source_system ?? record.sourceSystem ?? '').trim()
+  const sourceSystem = sourceSystemRaw || 'default'
+
   const sourceAccountRaw = record.source_account ?? record.sourceAccount
   const sourceAccount = sourceAccountRaw == null ? undefined : String(sourceAccountRaw).trim() || undefined
-
-  if (!sourceSystem) {
-    throw createError({
-      statusCode: 400,
-      statusMessage: 'Bad Request: source_system is required (string)'
-    })
-  }
 
   if (!Array.isArray(transactions)) {
     throw createError({

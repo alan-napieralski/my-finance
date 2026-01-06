@@ -51,9 +51,21 @@ In your n8n workflow (after the Telegram trigger):
    - `Authorization: Bearer <NUXT_API_KEY>`
    - `Content-Type: application/json`
 5. **Body Content Type**: JSON
-6. **Body**: Send your transactions as JSON (must include `source_system`)
+6. **Body**: Send your transactions as JSON (raw array supported)
 
-Example body structure:
+Example body (recommended for now):
+```json
+[
+  {
+    "date": "2025-11-15",
+    "description": "Salary",
+    "amount": 5000,
+    "balance": 12000
+  }
+]
+```
+
+Optional body (advanced):
 ```json
 {
   "source_system": "bank-main",
@@ -70,7 +82,7 @@ Example body structure:
 ```
 
 Notes:
-- `source_system` is part of the fingerprint namespace. Keep it stable (e.g. `monzo-personal`, `barclays-joint`).
+- If `source_system` is omitted, the server uses a default value.
 - Deduping is enforced in Postgres via a unique `(source_system, fingerprint)` constraint.
 
 ### 5. Access Data in Your Nuxt App
@@ -92,7 +104,7 @@ const { data } = await useFetch('/api/transactions', {
 ### POST `/api/finance/ingest`
 Receives transactions from n8n and inserts them idempotently
 - **Auth**: Required (`Authorization: Bearer <NUXT_API_KEY>`)
-- **Body**: JSON with `source_system` and `transactions: []`
+- **Body**: either a raw JSON array of transactions, or an object with `transactions: []`.
 - **Success Response**:
   - `{ success: true, runId: string, receivedAt: string, rowsSeen: number, rowsInserted: number, rowsSkippedDuplicates: number }`
 
@@ -132,6 +144,7 @@ ngrok http 3000
 **Current Implementation**: PostgreSQL is the source of truth for transactions.
 
 - Idempotency is enforced at the DB layer via a unique constraint on `(source_system, fingerprint)`.
+- If you post a raw array (no `source_system`), the server uses a default `source_system`.
 - The legacy in-memory store (`server/utils/financeStore.ts`) is no longer used for ingestion.
 
 ## Testing
@@ -142,16 +155,13 @@ Test the ingestion endpoint locally with curl:
 curl -X POST http://localhost:3000/api/finance/ingest \
   -H "Authorization: Bearer $NUXT_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{
-    "source_system": "bank-main",
-    "transactions": [
-      {
-        "date": "16/11/2025",
-        "description": "Test transaction",
-        "amount": -50.00
-      }
-    ]
-  }'
+  -d '[
+    {
+      "date": "16/11/2025",
+      "description": "Test transaction",
+      "amount": -50.00
+    }
+  ]'
 ```
 
 Then fetch transactions:

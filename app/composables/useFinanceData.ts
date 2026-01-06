@@ -1,8 +1,12 @@
+import type { FinanceEntry } from '~/types'
+
+type FetchResult<T> = { data: T, error: null } | { data: null, error: unknown }
+
 export const useFinanceData = () => {
   // Fetch latest finance data
-  const fetchLatest = async () => {
+  const fetchLatest = async (): Promise<FetchResult<FinanceEntry | null>> => {
     try {
-      const data = await $fetch('/api/finance/latest')
+      const data = await $fetch<FinanceEntry | null>('/api/finance/latest')
       return { data, error: null }
     } catch (err) {
       return { data: null, error: err }
@@ -21,7 +25,7 @@ export const useFinanceData = () => {
 
   // Auto-refreshing latest data (for real-time updates)
   const useLatestData = (refreshInterval = 10000) => {
-    const result = useFetch('/api/finance/latest', {
+    const result = useFetch<FinanceEntry | null>('/api/finance/latest', {
       watch: false,
       server: false
     })

@@ -12,7 +12,7 @@ export function useFinanceLatestEntry(
   const { default: defaultValue, ...rest } = options
 
   return useAsyncData<FinanceEntry | null>(key, async () => {
-    return await $fetch<FinanceEntry>('/api/finance/latest')
+    return await $fetch<FinanceEntry | null>('/api/finance/latest')
   }, {
     default: defaultValue ?? (() => null),
     ...rest

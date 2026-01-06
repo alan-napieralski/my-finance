@@ -51,6 +51,138 @@ const pushTx = (
   list.push(payload)
 }
 
+type MonthlyContext = {
+  year: number
+  monthIndex: number
+  monthId: string
+  rng: Rng
+}
+
+const generateIncome = (list: FinanceTransactionPayload[], ctx: MonthlyContext) => {
+  pushTx(list, {
+    id: `${ctx.monthId}-income-salary`,
+    date: formatIsoDate(makeUtcDate(ctx.year, ctx.monthIndex, 1)),
+    amount: randMoney(ctx.rng, 2800, 3800),
+    category: 'income',
+    description: 'Salary'
+  })
+}
+
+const generateBills = (list: FinanceTransactionPayload[], ctx: MonthlyContext) => {
+  pushTx(list, {
+    id: `${ctx.monthId}-bills-rent`,
+    date: formatIsoDate(makeUtcDate(ctx.year, ctx.monthIndex, 2)),
+    amount: -randMoney(ctx.rng, 900, 1400),
+    category: 'bills',
+    description: 'Rent'
+  })
+
+  pushTx(list, {
+    id: `${ctx.monthId}-bills-utilities`,
+    date: formatIsoDate(makeUtcDate(ctx.year, ctx.monthIndex, 14)),
+    amount: -randMoney(ctx.rng, 90, 220),
+    category: 'bills',
+    description: 'Utilities'
+  })
+}
+
+const generateSubscriptions = (list: FinanceTransactionPayload[], ctx: MonthlyContext) => {
+  pushTx(list, {
+    id: `${ctx.monthId}-subscriptions-phone`,
+    date: formatIsoDate(makeUtcDate(ctx.year, ctx.monthIndex, 6)),
+    amount: -randMoney(ctx.rng, 12, 45),
+    category: 'subscriptions',
+    description: 'Mobile plan'
+  })
+
+  pushTx(list, {
+    id: `${ctx.monthId}-subscriptions-streaming`,
+    date: formatIsoDate(makeUtcDate(ctx.year, ctx.monthIndex, 9)),
+    amount: -randMoney(ctx.rng, 8, 20),
+    category: 'subscriptions',
+    description: 'Streaming subscription'
+  })
+}
+
+const generateGroceries = (list: FinanceTransactionPayload[], ctx: MonthlyContext) => {
+  const groceryCount = randInt(ctx.rng, 4, 6)
+  for (let i = 0; i < groceryCount; i++) {
+    pushTx(list, {
+      id: `${ctx.monthId}-groceries-${i + 1}`,
+      date: formatIsoDate(makeUtcDate(ctx.year, ctx.monthIndex, 3 + i * 6)),
+      amount: -randMoney(ctx.rng, 35, 110),
+      category: 'groceries',
+      description: 'Groceries'
+    })
+  }
+}
+
+const generateTransport = (list: FinanceTransactionPayload[], ctx: MonthlyContext) => {
+  pushTx(list, {
+    id: `${ctx.monthId}-transport-pass`,
+    date: formatIsoDate(makeUtcDate(ctx.year, ctx.monthIndex, 4)),
+    amount: -randMoney(ctx.rng, 45, 120),
+    category: 'transport',
+    description: 'Transport'
+  })
+}
+
+const generateEatingOut = (list: FinanceTransactionPayload[], ctx: MonthlyContext) => {
+  const eatingOutCount = randInt(ctx.rng, 2, 5)
+  for (let i = 0; i < eatingOutCount; i++) {
+    pushTx(list, {
+      id: `${ctx.monthId}-eating-out-${i + 1}`,
+      date: formatIsoDate(makeUtcDate(ctx.year, ctx.monthIndex, 5 + i * 5)),
+      amount: -randMoney(ctx.rng, 12, 75),
+      category: 'eating out',
+      description: 'Eating out'
+    })
+  }
+}
+
+const generateRecurring = (list: FinanceTransactionPayload[], ctx: MonthlyContext) => {
+  pushTx(list, {
+    id: `${ctx.monthId}-recurring-gym`,
+    date: formatIsoDate(makeUtcDate(ctx.year, ctx.monthIndex, 7)),
+    amount: -randMoney(ctx.rng, 18, 55),
+    category: 'recurring',
+    description: 'Gym membership'
+  })
+}
+
+const generateHobbies = (list: FinanceTransactionPayload[], ctx: MonthlyContext) => {
+  pushTx(list, {
+    id: `${ctx.monthId}-hobbies`,
+    date: formatIsoDate(makeUtcDate(ctx.year, ctx.monthIndex, 16)),
+    amount: -randMoney(ctx.rng, 10, 80),
+    category: 'sport and hobbies',
+    description: 'Sport & hobbies'
+  })
+}
+
+const generateShopping = (list: FinanceTransactionPayload[], ctx: MonthlyContext) => {
+  const shoppingCount = randInt(ctx.rng, 0, 2)
+  for (let i = 0; i < shoppingCount; i++) {
+    pushTx(list, {
+      id: `${ctx.monthId}-shopping-${i + 1}`,
+      date: formatIsoDate(makeUtcDate(ctx.year, ctx.monthIndex, 11 + i * 10)),
+      amount: -randMoney(ctx.rng, 25, i === 0 ? 220 : 140),
+      category: 'shopping',
+      description: 'Shopping'
+    })
+  }
+}
+
+const generateSavings = (list: FinanceTransactionPayload[], ctx: MonthlyContext) => {
+  pushTx(list, {
+    id: `${ctx.monthId}-savings`,
+    date: formatIsoDate(makeUtcDate(ctx.year, ctx.monthIndex, 20)),
+    amount: -randMoney(ctx.rng, 100, 600),
+    category: 'savings',
+    description: 'Savings transfer'
+  })
+}
+
 /**
  * Generates a deterministic but realistic-looking set of transactions.
  *
@@ -72,120 +204,24 @@ export function buildMockFinanceTransactions(options: MockFinanceDataOptions = {
 
     const rng = mulberry32(hashStringToSeed(monthId))
 
-    // Income (salary)
-    pushTx(transactions, {
-      id: `${monthId}-income-salary`,
-      date: formatIsoDate(makeUtcDate(year, monthIndex, 1)),
-      amount: randMoney(rng, 2800, 3800),
-      category: 'income',
-      description: 'Salary'
-    })
-
-    // Bills
-    pushTx(transactions, {
-      id: `${monthId}-bills-rent`,
-      date: formatIsoDate(makeUtcDate(year, monthIndex, 2)),
-      amount: -randMoney(rng, 900, 1400),
-      category: 'bills',
-      description: 'Rent'
-    })
-
-    pushTx(transactions, {
-      id: `${monthId}-bills-utilities`,
-      date: formatIsoDate(makeUtcDate(year, monthIndex, 14)),
-      amount: -randMoney(rng, 90, 220),
-      category: 'bills',
-      description: 'Utilities'
-    })
-
-    // Subscriptions
-    pushTx(transactions, {
-      id: `${monthId}-subscriptions-phone`,
-      date: formatIsoDate(makeUtcDate(year, monthIndex, 6)),
-      amount: -randMoney(rng, 12, 45),
-      category: 'subscriptions',
-      description: 'Mobile plan'
-    })
-
-    pushTx(transactions, {
-      id: `${monthId}-subscriptions-streaming`,
-      date: formatIsoDate(makeUtcDate(year, monthIndex, 9)),
-      amount: -randMoney(rng, 8, 20),
-      category: 'subscriptions',
-      description: 'Streaming subscription'
-    })
-
-    // Groceries (weekly-ish)
-    const groceryCount = randInt(rng, 4, 6)
-    for (let i = 0; i < groceryCount; i++) {
-      pushTx(transactions, {
-        id: `${monthId}-groceries-${i + 1}`,
-        date: formatIsoDate(makeUtcDate(year, monthIndex, 3 + i * 6)),
-        amount: -randMoney(rng, 35, 110),
-        category: 'groceries',
-        description: 'Groceries'
-      })
+    const ctx: MonthlyContext = {
+      year,
+      monthIndex,
+      monthId,
+      rng
     }
 
-    // Transport (mix of pass/fuel)
-    pushTx(transactions, {
-      id: `${monthId}-transport-pass`,
-      date: formatIsoDate(makeUtcDate(year, monthIndex, 4)),
-      amount: -randMoney(rng, 45, 120),
-      category: 'transport',
-      description: 'Transport'
-    })
-
-    // Eating out
-    const eatingOutCount = randInt(rng, 2, 5)
-    for (let i = 0; i < eatingOutCount; i++) {
-      pushTx(transactions, {
-        id: `${monthId}-eating-out-${i + 1}`,
-        date: formatIsoDate(makeUtcDate(year, monthIndex, 5 + i * 5)),
-        amount: -randMoney(rng, 12, 75),
-        category: 'eating out',
-        description: 'Eating out'
-      })
-    }
-
-    // Recurring (e.g. gym)
-    pushTx(transactions, {
-      id: `${monthId}-recurring-gym`,
-      date: formatIsoDate(makeUtcDate(year, monthIndex, 7)),
-      amount: -randMoney(rng, 18, 55),
-      category: 'recurring',
-      description: 'Gym membership'
-    })
-
-    // Sport and hobbies
-    pushTx(transactions, {
-      id: `${monthId}-hobbies`,
-      date: formatIsoDate(makeUtcDate(year, monthIndex, 16)),
-      amount: -randMoney(rng, 10, 80),
-      category: 'sport and hobbies',
-      description: 'Sport & hobbies'
-    })
-
-    // Shopping (0–2 per month)
-    const shoppingCount = randInt(rng, 0, 2)
-    for (let i = 0; i < shoppingCount; i++) {
-      pushTx(transactions, {
-        id: `${monthId}-shopping-${i + 1}`,
-        date: formatIsoDate(makeUtcDate(year, monthIndex, 11 + i * 10)),
-        amount: -randMoney(rng, 25, i === 0 ? 220 : 140),
-        category: 'shopping',
-        description: 'Shopping'
-      })
-    }
-
-    // Savings (treat as an outflow so it shows up under the Savings main category)
-    pushTx(transactions, {
-      id: `${monthId}-savings`,
-      date: formatIsoDate(makeUtcDate(year, monthIndex, 20)),
-      amount: -randMoney(rng, 100, 600),
-      category: 'savings',
-      description: 'Savings transfer'
-    })
+    // Keep generation order stable so RNG consumption stays deterministic.
+    generateIncome(transactions, ctx)
+    generateBills(transactions, ctx)
+    generateSubscriptions(transactions, ctx)
+    generateGroceries(transactions, ctx)
+    generateTransport(transactions, ctx)
+    generateEatingOut(transactions, ctx)
+    generateRecurring(transactions, ctx)
+    generateHobbies(transactions, ctx)
+    generateShopping(transactions, ctx)
+    generateSavings(transactions, ctx)
   }
 
   // Oldest -> newest

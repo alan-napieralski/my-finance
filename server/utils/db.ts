@@ -1,9 +1,6 @@
-import { createRequire } from 'node:module'
-import type { Pool as PgPool, PoolClient } from 'pg'
+import type { PoolClient } from 'pg'
+import { Pool as PgPool } from 'pg'
 import { createError } from 'h3'
-
-const require = createRequire(import.meta.url)
-const { Pool: PgPoolCtor } = require('pg') as typeof import('pg')
 
 const globalForPg = globalThis as typeof globalThis & { __myFinancePgPool?: PgPool }
 
@@ -50,7 +47,7 @@ export function getPgPool(): PgPool {
     })
   }
 
-  pool = new PgPoolCtor({
+  pool = new PgPool({
     connectionString: databaseUrl,
     ssl: resolveSsl(databaseUrl),
     max: Number(process.env.PGPOOL_MAX ?? 10)
