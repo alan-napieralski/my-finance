@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format, startOfMonth, startOfWeek } from 'date-fns'
 import { VisXYContainer, VisLine, VisAxis, VisArea, VisCrosshair, VisTooltip } from '@unovis/vue'
-import type { Period, Range, FinanceEntry } from '~/types'
-import { parseFinanceTransactions } from '~/utils/finance/transactions'
+import type { Period, Range, TransactionRow, TransactionsResponse } from '~/types'
+import { useTransactionsApi } from '~/composables/finance/useTransactionsApi'
 
 const cardRef = useTemplateRef<HTMLElement | null>('cardRef')
 
@@ -16,25 +16,32 @@ type DataRecord = {
   amount: number
 }
 
+const { fetchTransactions } = useTransactionsApi()
+
 const { width } = useElementSize(cardRef)
 
 const data = ref<DataRecord[]>([])
-const latestEntry = ref<FinanceEntry | null>(null)
+const transactions = ref<TransactionRow[]>([])
 
-const { fetchLatest } = useFinanceData()
-
-const POLL_INTERVAL_MS = 10000
+const POLL_INTERVAL_MS = 30000
 let pollId: number | null = null
 
-const buildChartData = () => {
-  if (!latestEntry.value) {
-    data.value = []
-    return
-  }
+const loadTransactions = async () => {
+  try {
+    const response: TransactionsResponse = await fetchTransactions(props.range)
 
-  const transactions = parseFinanceTransactions(latestEntry.value).filter(({ date }) => {
-    return date >= props.range.start && date <= props.range.end
-  })
+    transactions.value = response.data
+  } catch (error) {
+    console.error('[HomeChart] failed to fetch /api/transactions', error)
+    transactions.value = []
+  }
+}
+
+const buildChartData = () => {
+  const parsed = transactions.value.map(tx => ({
+    date: new Date(tx.date),
+    amount: tx.amount
+  }))
 
   const bucketKey = (date: Date): string => {
     if (props.period === 'daily') {
@@ -50,7 +57,7 @@ const buildChartData = () => {
 
   const buckets = new Map<string, number>()
 
-  for (const tx of transactions) {
+  for (const tx of parsed) {
     const key = bucketKey(tx.date)
     const previous = buckets.get(key) ?? 0
     const spent = tx.amount < 0 ? Math.abs(tx.amount) : 0
@@ -71,24 +78,10 @@ const buildChartData = () => {
   }))
 }
 
-const loadLatest = async () => {
-  const { data: latest, error } = await fetchLatest()
-
-  if (error) {
-    latestEntry.value = null
-    return
-  }
-
-  latestEntry.value = (latest ?? null) as FinanceEntry | null
-}
-
-onMounted(async () => {
-  await loadLatest()
-
-  // Poll so that when n8n posts new data to /api/finance/webhook,
-  // the chart picks up the latest entry without a manual reload.
+onMounted(() => {
+  // Poll to pick up newly ingested transactions without a manual reload.
   pollId = window.setInterval(() => {
-    loadLatest()
+    loadTransactions()
   }, POLL_INTERVAL_MS)
 })
 
@@ -99,7 +92,11 @@ onUnmounted(() => {
   }
 })
 
-watch([() => props.period, () => props.range, latestEntry], () => {
+watch([() => props.range.start, () => props.range.end], async () => {
+  await loadTransactions()
+}, { immediate: true })
+
+watch([() => props.period, transactions], () => {
   buildChartData()
 }, { immediate: true })
 

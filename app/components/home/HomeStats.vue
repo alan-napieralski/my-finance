@@ -1,36 +1,34 @@
 <script setup lang="ts">
-import type { Period, Range, Stat, FinanceEntry } from '~/types'
+import type { Period, Range, Stat, TransactionsResponse } from '~/types'
 import { formatCurrency } from '~/utils/currency'
-import { parseFinanceTransactions } from '~/utils/finance/transactions'
+import { useTransactionsApi } from '~/composables/finance/useTransactionsApi'
 
 const props = defineProps<{
   period: Period
   range: Range
 }>()
 
+const { fetchTransactions } = useTransactionsApi()
+
 const { data: stats } = await useAsyncData<Stat[]>('stats', async () => {
-  let latest: FinanceEntry | null = null
+  let response: TransactionsResponse
 
   try {
-    latest = await $fetch<FinanceEntry>('/api/finance/latest')
+    response = await fetchTransactions(props.range)
   } catch (error) {
-    console.error('[HomeStats] failed to fetch /api/finance/latest', error)
+    console.error('[HomeStats] failed to fetch /api/transactions', error)
     return []
   }
 
-  const all = parseFinanceTransactions(latest)
+  const transactions = response.data
 
-  const transactionsInRange = all.filter((tx) => {
-    return tx.date >= props.range.start && tx.date <= props.range.end
-  })
+  const totalTransactions = transactions.length
 
-  const totalTransactions = transactionsInRange.length
-
-  const totalSpent = transactionsInRange.reduce((sum, tx) => {
+  const totalSpent = transactions.reduce((sum, tx) => {
     return sum + (tx.amount < 0 ? Math.abs(tx.amount) : 0)
   }, 0)
 
-  const netAmount = transactionsInRange.reduce((sum, tx) => sum + tx.amount, 0)
+  const netAmount = transactions.reduce((sum, tx) => sum + tx.amount, 0)
 
   const metrics: Stat[] = [
     {

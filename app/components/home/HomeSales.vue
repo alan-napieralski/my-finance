@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { h } from 'vue'
 import type { TableColumn } from '@nuxt/ui'
-import type { Period, Range, FinanceEntry, TransactionRow, SortField, SortDirection } from '~/types'
-import { toTransactionRows } from '~/utils/finance/transactions'
+import type { Period, Range, TransactionRow, SortField, SortDirection, TransactionsResponse } from '~/types'
+import { useTransactionsApi } from '~/composables/finance/useTransactionsApi'
 
 const props = defineProps<{
   period: Period
   range: Range
 }>()
+
+const { fetchTransactions } = useTransactionsApi()
 
 const searchQuery = ref('')
 const selectedCategories = ref<string[]>([])
@@ -15,23 +17,14 @@ const sortField = ref<SortField>('date')
 const sortDirection = ref<SortDirection>('desc')
 
 const { data: allTransactions } = await useAsyncData<TransactionRow[]>('finance-transactions', async () => {
-  let latest: FinanceEntry | null = null
-
   try {
-    latest = await $fetch<FinanceEntry>('/api/finance/latest')
+    const response: TransactionsResponse = await fetchTransactions(props.range)
+
+    return response.data
   } catch (error) {
-    console.error('[HomeSales] failed to fetch /api/finance/latest', error)
+    console.error('[HomeSales] failed to fetch /api/transactions', error)
     return []
   }
-
-  const all = toTransactionRows(latest)
-
-  const filtered = all.filter((tx) => {
-    const date = new Date(tx.date)
-    return date >= props.range.start && date <= props.range.end
-  })
-
-  return filtered
 }, {
   watch: [() => props.period, () => props.range],
   default: () => []

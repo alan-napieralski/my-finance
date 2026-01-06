@@ -29,5 +29,10 @@ export interface Transaction {
   description: string
 }
 
+export type TransactionsResponse = {
+  count: number
+  data: TransactionRow[]
+}
+
 export type SortField = 'date' | 'amount' | 'balance'
 export type SortDirection = 'asc' | 'desc'
