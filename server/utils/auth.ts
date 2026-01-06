@@ -2,14 +2,10 @@ import crypto from 'node:crypto'
 import { createError, getHeader, type H3Event } from 'h3'
 
 const timingSafeEqual = (a: string, b: string): boolean => {
-  const aBuf = Buffer.from(a)
-  const bBuf = Buffer.from(b)
+  const aDigest = crypto.createHash('sha256').update(a).digest()
+  const bDigest = crypto.createHash('sha256').update(b).digest()
 
-  if (aBuf.length !== bBuf.length) {
-    return false
-  }
-
-  return crypto.timingSafeEqual(aBuf, bBuf)
+  return crypto.timingSafeEqual(aDigest, bDigest)
 }
 
 export function assertApiKey(event: H3Event) {

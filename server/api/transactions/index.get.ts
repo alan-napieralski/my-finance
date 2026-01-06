@@ -78,7 +78,7 @@ LIMIT $${values.length}
 
     return (result.rows as DbTransactionRow[]).map((row): TransactionRow => {
       const dateString = String(row.posted_on)
-      const iso = new Date(`${dateString}T00:00:00`).toISOString()
+      const iso = new Date(`${dateString}T00:00:00Z`).toISOString()
 
       return {
         id: String(row.id),

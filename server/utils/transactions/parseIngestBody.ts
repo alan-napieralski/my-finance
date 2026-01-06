@@ -56,15 +56,16 @@ export function parseFinanceIngestBody(body: unknown): FinanceIngestRequest {
   }
 
   // Lightweight validation of transaction item shapes (full normalization happens later)
-  const txSchema = z.object({
-    date: z.union([z.string(), z.number()]),
+  const txSchema: z.ZodType<FinanceTransactionPayload> = z.object({
+    id: z.string().optional(),
+    date: z.preprocess(val => typeof val === 'number' ? String(val) : val, z.string()),
     amount: z.union([z.string(), z.number()]),
     balance: z.union([z.string(), z.number()]).optional(),
     category: z.string().optional(),
     description: z.string().optional()
   }).passthrough()
 
-  const parsedTransactions = z.array(txSchema).parse(transactions) as FinanceTransactionPayload[]
+  const parsedTransactions = z.array(txSchema).parse(transactions)
 
   const meta = isRecord(body)
     ? omitKeys(record, ['transactions', 'body', 'source_system', 'sourceSystem', 'source_account', 'sourceAccount'])
