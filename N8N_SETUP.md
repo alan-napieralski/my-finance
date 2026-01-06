@@ -10,7 +10,12 @@ Your Nuxt app can now receive finance data from n8n via a secure webhook endpoin
 Create a `.env` file in your project root (or update existing one):
 
 ```bash
+# API key for inbound n8n ingestion requests
 NUXT_API_KEY=your-secure-random-api-key
+
+# Postgres connection string (server-side only)
+# Local via docker-compose:
+NUXT_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/my_finance
 ```
 
 Generate a secure API key:
@@ -19,7 +24,11 @@ Generate a secure API key:
 openssl rand -hex 32
 ```
 
-### 2. Start Your Nuxt App
+### 2. Set up the database schema
+
+Apply the migration in `server/db/migrations/001_init.sql` to your Postgres database (the app expects `transactions` and `ingest_runs`).
+
+### 3. Start Your Nuxt App
 
 ```bash
 pnpm dev
@@ -27,74 +36,77 @@ pnpm dev
 
 Your app will run on `http://localhost:3000`
 
-### 3. Configure n8n Workflow
+### 4. Configure n8n Workflow
 
 In your n8n workflow (after the Telegram trigger):
 
 #### Add HTTP Request Node
 1. **Method**: POST
-2. **URL**: `http://your-domain:3000/api/finance/webhook`
-   - For local development: `http://localhost:3000/api/finance/webhook`
-   - For production: `https://yourdomain.com/api/finance/webhook`
-3. **Authentication**: None ⚠️ **Auth currently disabled for local testing**
-4. **Headers**: None required (authentication temporarily disabled)
+2. **URL**: `http://your-domain:3000/api/finance/ingest`
+   - Local development: `http://localhost:3000/api/finance/ingest`
+   - Production: `https://yourdomain.com/api/finance/ingest`
+   - Backwards-compatible alias: `.../api/finance/webhook`
+3. **Authentication**: Header auth (Bearer token)
+4. **Headers**:
+   - `Authorization: Bearer <NUXT_API_KEY>`
+   - `Content-Type: application/json`
 5. **Body Content Type**: JSON
-6. **Body**: Send your finance data as JSON
+6. **Body**: Send your transactions as JSON (must include `source_system`)
 
 Example body structure:
 ```json
 {
-  "type": "monthly_report",
-  "date": "2025-11-16",
-  "income": 5000,
-  "expenses": 3000,
-  "balance": 2000,
+  "source_system": "bank-main",
+  "source_account": "checking",
   "transactions": [
     {
       "date": "2025-11-15",
       "description": "Salary",
-      "amount": 5000
+      "amount": 5000,
+      "balance": 12000
     }
   ]
 }
 ```
 
-### 4. Access Data in Your Nuxt App
+Notes:
+- `source_system` is part of the fingerprint namespace. Keep it stable (e.g. `monzo-personal`, `barclays-joint`).
+- Deduping is enforced in Postgres via a unique `(source_system, fingerprint)` constraint.
 
-#### Fetch Latest Finance Data
+### 5. Access Data in Your Nuxt App
+
+#### Fetch Transactions (recommended)
 ```typescript
 // In any component or composable
-const { data: financeData } = await useFetch('/api/finance/latest')
-```
-
-#### Fetch All Finance Data
-```typescript
-// Get last 50 entries (default)
-const { data: allData } = await useFetch('/api/finance')
-
-// Get specific number of entries
-const { data: limitedData } = await useFetch('/api/finance?limit=10')
+const { data } = await useFetch('/api/transactions', {
+  query: {
+    start: '2025-11-01',
+    end: '2025-11-30',
+    limit: 20000
+  }
+})
 ```
 
 ## API Endpoints
 
+### POST `/api/finance/ingest`
+Receives transactions from n8n and inserts them idempotently
+- **Auth**: Required (`Authorization: Bearer <NUXT_API_KEY>`)
+- **Body**: JSON with `source_system` and `transactions: []`
+- **Success Response**:
+  - `{ success: true, runId: string, receivedAt: string, rowsSeen: number, rowsInserted: number, rowsSkippedDuplicates: number }`
+
 ### POST `/api/finance/webhook`
-Receives finance data from n8n
-- **Auth**: ⚠️ **Currently disabled for local testing** (no Authorization header required)
-- **Body**: JSON object with your finance data
-- **Success Response**: `{ success: true, id: string, timestamp: string }`
-- **Note**: Re-enable authentication in `server/api/finance/webhook.post.ts` before deploying to production
+Backwards-compatible alias for `/api/finance/ingest`
 
-### GET `/api/finance/latest`
-Returns the most recent finance data entry
+### GET `/api/transactions?start=YYYY-MM-DD&end=YYYY-MM-DD&limit=20000`
+Returns transactions within the requested range
 - **Auth**: None
-- **Response**: `{ id: string, timestamp: string, data: {...} }`
-
-### GET `/api/finance?limit=50`
-Returns all finance data entries
-- **Auth**: None
-- **Query Params**: `limit` (optional, default: 50)
-- **Response**: `{ count: number, data: [...] }`
+- **Query Params**:
+  - `start`, `end` (required)
+  - `limit` (optional, default: 5000, max: 20000)
+  - `source_system`, `source_account` (optional)
+- **Response**: `{ count: number, data: TransactionRow[] }`
 
 ## Production Deployment
 
@@ -117,29 +129,21 @@ ngrok http 3000
 
 ## Storage Notes
 
-**Current Implementation**: In-memory storage (data persists only while app is running)
-- Stores last 100 entries
-- Data is lost on server restart
+**Current Implementation**: PostgreSQL is the source of truth for transactions.
 
-**For Production**: Consider integrating a database:
-- Supabase
-- Prisma with PostgreSQL
-- MongoDB
-- Firebase
-
-Update `server/utils/financeStore.ts` to use your chosen database.
+- Idempotency is enforced at the DB layer via a unique constraint on `(source_system, fingerprint)`.
+- The legacy in-memory store (`server/utils/financeStore.ts`) is no longer used for ingestion.
 
 ## Testing
 
-Test the webhook locally with curl:
+Test the ingestion endpoint locally with curl:
 
 ```bash
-curl -X POST http://localhost:3000/api/finance/webhook \
+curl -X POST http://localhost:3000/api/finance/ingest \
+  -H "Authorization: Bearer $NUXT_API_KEY" \
   -H "Content-Type: application/json" \
   -d '{
-    "type": "test",
-    "amount": 1000,
-    "date": "2025-11-16",
+    "source_system": "bank-main",
     "transactions": [
       {
         "date": "16/11/2025",
@@ -150,9 +154,7 @@ curl -X POST http://localhost:3000/api/finance/webhook \
   }'
 ```
 
-**Note**: ⚠️ Authentication is currently disabled for local testing. No Authorization header is required. Remember to re-enable authentication in the webhook handler before production deployment.
-
-Then fetch it:
+Then fetch transactions:
 ```bash
-curl http://localhost:3000/api/finance/latest
+curl "http://localhost:3000/api/transactions?start=2025-11-01&end=2025-11-30&limit=20000"
 ```
