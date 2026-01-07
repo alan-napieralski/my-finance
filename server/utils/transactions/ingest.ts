@@ -4,6 +4,7 @@ import { createError } from 'h3'
 import type { PoolClient } from 'pg'
 import type { FinanceTransactionPayload } from '~/types'
 import { parseTransactionDate } from '~/utils/dateParser'
+import { fetchIncomeRuleKeys } from './incomeRules'
 
 const normalizeWhitespace = (value: string) => value.replace(/\s+/g, ' ').trim()
 
@@ -63,7 +64,8 @@ const normalizeOne = (
   tx: FinanceTransactionPayload,
   index: number,
   sourceSystem: string,
-  sourceAccount: string | null
+  sourceAccount: string | null,
+  incomeRuleKeys: Set<string>
 ): NormalizedInsertRow => {
   const date = parseTransactionDate(String(tx.date ?? ''))
   if (!date) {
@@ -101,7 +103,13 @@ const normalizeOne = (
   const amount = toMoneyString(amountNumber)
   const balance = balanceNumber == null ? null : toMoneyString(balanceNumber)
 
-  const category = tx.category == null ? null : normalizeWhitespace(String(tx.category)) || null
+  const descriptionKey = description.toLowerCase()
+
+  let category = tx.category == null ? null : normalizeWhitespace(String(tx.category)) || null
+
+  if (amountNumber > 0 && incomeRuleKeys.has(descriptionKey)) {
+    category = 'income'
+  }
 
   const fingerprint = computeFingerprint({
     sourceSystem,
@@ -212,8 +220,10 @@ export async function ingestFinanceTransactions(options: {
     })
   }
 
+  const incomeRuleKeys = await fetchIncomeRuleKeys(options.client)
+
   const normalized = options.transactions.map((tx, index) => {
-    return normalizeOne(tx, index, options.sourceSystem, sourceAccount)
+    return normalizeOne(tx, index, options.sourceSystem, sourceAccount, incomeRuleKeys)
   })
 
   const rowsSeen = normalized.length

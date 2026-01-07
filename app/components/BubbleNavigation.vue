@@ -13,6 +13,10 @@ const links = [{
   label: 'Plans',
   icon: 'i-lucide-target',
   to: '/plans'
+}, {
+  label: 'Settings',
+  icon: 'i-lucide-settings',
+  to: '/settings'
 }]
 
 const isActive = (to: string) => {

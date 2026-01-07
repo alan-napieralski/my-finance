@@ -1,14 +1,11 @@
 <script setup lang="ts">
-import type { TransactionRow, TransactionsResponse } from '~/types'
+import type { BudgetStatCard, TransactionRow, TransactionsResponse } from '~/types'
 import { useBudgetMonthTabs } from '~/composables/budget/useBudgetMonthTabs'
 import { useSpendingBreakdown } from '~/composables/budget/useSpendingBreakdown'
 import { useTransactionsApi } from '~/composables/finance/useTransactionsApi'
-import { useBudgetStore } from '~/stores/budget'
 import { formatCurrency } from '~/utils/currency'
 import { getMonthRange } from '~/utils/dateRanges'
 import { toBudgetTransactionsFromRows } from '~/utils/finance/transactions'
-
-const budgetStore = useBudgetStore()
 
 const {
   monthTabItems,
@@ -17,12 +14,6 @@ const {
   previousMonthId,
   previousMonthLabel
 } = useBudgetMonthTabs()
-
-const month = computed(() => budgetStore.getOrCreateMonth(validatedMonthId.value))
-
-const plannedIncomeTotal = computed(() => {
-  return month.value.income.reduce((sum, line) => sum + (line.amount || 0), 0)
-})
 
 const { fetchTransactions } = useTransactionsApi()
 
@@ -62,22 +53,9 @@ const {
   previousMonthId
 })
 
-// Local UI-only type for stats displayed in this component.
-// Kept here rather than in app/types to avoid leaking view-specific concerns.
-type BudgetStatCard = {
-  key: string
-  label: string
-  value: string
-  valueClass?: string
-}
-
 const budgetStats = computed<BudgetStatCard[]>(() => [{
   key: 'income',
   label: 'Income',
-  value: formatCurrency(plannedIncomeTotal.value)
-}, {
-  key: 'actual-income',
-  label: 'Actual income',
   value: formatCurrency(actualIncome.value)
 }, {
   key: 'spent',
@@ -108,11 +86,7 @@ const budgetStats = computed<BudgetStatCard[]>(() => [{
 
         <USeparator />
 
-        <!-- Income & Commitments - two columns on larger screens -->
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          <BudgetPlannerIncomeCard :month-id="validatedMonthId" />
-          <BudgetPlannerCommitmentsCard :month-id="validatedMonthId" />
-        </div>
+        <BudgetPlannerCommitmentsCard :month-id="validatedMonthId" />
       </div>
     </UPageCard>
 

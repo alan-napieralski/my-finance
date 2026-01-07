@@ -26,7 +26,10 @@ export function useSpendingBreakdown({ transactions, monthId, previousMonthId }:
   })
 
   const actualIncome = computed(() => {
-    return monthTransactions.value.reduce((sum, tx) => sum + (tx.amount > 0 ? tx.amount : 0), 0)
+    return monthTransactions.value.reduce((sum, tx) => {
+      const isIncome = resolveCategoryKey(tx.category) === 'income'
+      return sum + (isIncome && tx.amount > 0 ? tx.amount : 0)
+    }, 0)
   })
 
   const actualSpent = computed(() => {
