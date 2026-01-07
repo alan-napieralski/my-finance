@@ -1,12 +1,37 @@
 <script setup lang="ts">
 import { storeToRefs } from 'pinia'
 import { usePlansStore } from '~/stores/plans'
+import { subcategoryToMainCategory } from '~/utils/budgetCategories'
 import { formatCurrency } from '~/utils/currency'
 
 const plansStore = usePlansStore()
 
 const { recurringPayments, totalRecurringPaymentsPerMonth } = storeToRefs(plansStore)
 const { addRecurringPayment, removeRecurringPayment } = plansStore
+
+const categoryKeys = Object.keys(subcategoryToMainCategory)
+
+const formatCategoryLabel = (key: string): string => {
+  if (!key) return key
+
+  return key
+    .split(' ')
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+const categoryItems = computed(() => {
+  return categoryKeys.map(key => ({
+    label: formatCategoryLabel(key),
+    value: key
+  }))
+})
+
+const normalizeCategory = (value: string | undefined): string => {
+  const key = (value ?? '').trim().toLowerCase()
+  return categoryKeys.includes(key) ? key : 'other'
+}
 </script>
 
 <template>
@@ -56,11 +81,11 @@ const { addRecurringPayment, removeRecurringPayment } = plansStore
           :key="payment.id"
           class="flex flex-col gap-3 px-4 py-3 sm:px-6 sm:py-4"
         >
-          <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center justify-between gap-3">
             <UFormField
               :name="`recurring-name-${payment.id}`"
               label="Name"
-              class="flex-1 min-w-[10rem]"
+              class="flex-1 w-full sm:w-auto sm:min-w-[10rem]"
             >
               <UInput
                 :model-value="payment.name"
@@ -74,9 +99,9 @@ const { addRecurringPayment, removeRecurringPayment } = plansStore
               label="Category"
               class="w-full sm:w-48"
             >
-              <UInput
-                :model-value="payment.category"
-                placeholder="Bills, subscriptions, ..."
+              <USelect
+                :model-value="normalizeCategory(payment.category)"
+                :items="categoryItems"
                 @update:model-value="value => plansStore.updateRecurringPayment(payment.id, { category: String(value) })"
               />
             </UFormField>
@@ -99,7 +124,7 @@ const { addRecurringPayment, removeRecurringPayment } = plansStore
               color="neutral"
               variant="ghost"
               icon="i-lucide-trash-2"
-              class="self-start"
+              class="self-start sm:self-center"
               @click="removeRecurringPayment(payment.id)"
             />
           </div>

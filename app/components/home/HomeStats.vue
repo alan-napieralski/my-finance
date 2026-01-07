@@ -1,74 +1,34 @@
 <script setup lang="ts">
-import type { Period, Range, Stat } from '~/types'
-import { parseTransactionDate } from '~/utils/dateParser'
+import type { Period, Range, Stat, TransactionsResponse } from '~/types'
 import { formatCurrency } from '~/utils/currency'
+import { useTransactionsApi } from '~/composables/finance/useTransactionsApi'
 
 const props = defineProps<{
   period: Period
   range: Range
 }>()
 
-type FinanceEntry = {
-  id: string
-  timestamp: string
-  data: Record<string, unknown>
-}
-
-type Transaction = {
-  date: Date
-  amount: number
-}
-
-const extractTransactions = (entry: FinanceEntry | null): Transaction[] => {
-  if (!entry || !entry.data) {
-    return []
-  }
-
-  const payload = entry.data
-  const source = Array.isArray(payload.transactions)
-    ? payload.transactions
-    : Array.isArray(payload)
-      ? payload
-      : []
-
-  return source
-    .map((item: unknown) => {
-      const record = item as Record<string, unknown>
-      const date = parseTransactionDate(record.date as string)
-      const amount = typeof record.amount === 'string' ? Number.parseFloat(record.amount) : Number(record.amount)
-
-      if (!date || Number.isNaN(amount)) {
-        return null
-      }
-
-      return { date, amount }
-    })
-    .filter((item): item is Transaction => item !== null)
-}
+const { fetchTransactions } = useTransactionsApi()
 
 const { data: stats } = await useAsyncData<Stat[]>('stats', async () => {
-  let latest: FinanceEntry | null = null
+  let response: TransactionsResponse
 
   try {
-    latest = await $fetch<FinanceEntry>('/api/finance/latest')
+    response = await fetchTransactions(props.range)
   } catch (error) {
-    console.error('[HomeStats] failed to fetch /api/finance/latest', error)
+    console.error('[HomeStats] failed to fetch /api/transactions', error)
     return []
   }
 
-  const all = extractTransactions(latest)
+  const transactions = response.data
 
-  const transactionsInRange = all.filter((tx) => {
-    return tx.date >= props.range.start && tx.date <= props.range.end
-  })
+  const totalTransactions = transactions.length
 
-  const totalTransactions = transactionsInRange.length
-
-  const totalSpent = transactionsInRange.reduce((sum, tx) => {
+  const totalSpent = transactions.reduce((sum, tx) => {
     return sum + (tx.amount < 0 ? Math.abs(tx.amount) : 0)
   }, 0)
 
-  const netAmount = transactionsInRange.reduce((sum, tx) => sum + tx.amount, 0)
+  const netAmount = transactions.reduce((sum, tx) => sum + tx.amount, 0)
 
   const metrics: Stat[] = [
     {
@@ -105,7 +65,7 @@ const { data: stats } = await useAsyncData<Stat[]>('stats', async () => {
 </script>
 
 <template>
-  <UPageGrid class="lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-px">
+  <UPageGrid class="grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-px">
     <UPageCard
       v-for="(stat, index) in stats"
       :key="index"
@@ -118,7 +78,7 @@ const { data: stats } = await useAsyncData<Stat[]>('stats', async () => {
         leading: 'p-2.5 rounded-full bg-primary/10 ring ring-inset ring-primary/25 flex-col',
         title: 'font-normal text-muted text-xs uppercase'
       }"
-      class="lg:rounded-none first:rounded-l-lg last:rounded-r-lg hover:z-1"
+      class="lg:rounded-none lg:first:rounded-l-lg lg:last:rounded-r-lg hover:z-1"
     >
       <div class="flex items-center gap-2">
         <span class="text-2xl font-semibold text-highlighted">

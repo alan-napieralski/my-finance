@@ -1,18 +1,22 @@
+import type { FetchResult, FinanceEntry } from '~/types'
+
 export const useFinanceData = () => {
   // Fetch latest finance data
-  const fetchLatest = async () => {
+  const fetchLatest = async (): Promise<FetchResult<FinanceEntry | null>> => {
     try {
-      const data = await $fetch('/api/finance/latest')
+      const data = await $fetch<FinanceEntry | null>('/api/finance/latest')
       return { data, error: null }
     } catch (err) {
       return { data: null, error: err }
     }
   }
 
+  type FinanceEntriesResponse = { count: number, data: FinanceEntry[] }
+
   // Fetch all finance data with optional limit
-  const fetchAll = async (limit = 50) => {
+  const fetchAll = async (limit = 50): Promise<FetchResult<FinanceEntriesResponse>> => {
     try {
-      const data = await $fetch(`/api/finance`, { query: { limit } })
+      const data = await $fetch<FinanceEntriesResponse>('/api/finance', { query: { limit } })
       return { data, error: null }
     } catch (err) {
       return { data: null, error: err }
@@ -21,7 +25,7 @@ export const useFinanceData = () => {
 
   // Auto-refreshing latest data (for real-time updates)
   const useLatestData = (refreshInterval = 10000) => {
-    const result = useFetch('/api/finance/latest', {
+    const result = useFetch<FinanceEntry | null>('/api/finance/latest', {
       watch: false,
       server: false
     })

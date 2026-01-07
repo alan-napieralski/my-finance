@@ -1,14 +1,13 @@
 import { computed } from 'vue'
 import { defineStore } from 'pinia'
 import { useStorage } from '@vueuse/core'
-import type { BudgetMonth, IncomeLine, BudgetItem } from '~/types'
+import type { BudgetMonth, IncomeLine, WantOverride, WantOverridePatch, DebtPaymentStatus } from '~/types'
 
 type BudgetMonthMap = Record<string, BudgetMonth>
 
 const emptyMonth = (monthId: string): BudgetMonth => ({
   monthId,
-  income: [{ id: crypto.randomUUID(), name: 'Salary', amount: 0 }],
-  items: []
+  income: [{ id: crypto.randomUUID(), name: 'Salary', amount: 0 }]
 })
 
 const toAmount = (value: unknown): number => {
@@ -24,8 +23,6 @@ const validateMonthId = (monthId: string): void => {
 
 export const useBudgetStore = defineStore('budget', () => {
   const months = useStorage<BudgetMonthMap>('budget:months', {})
-  const rolloverEnabled = useStorage<boolean>('budget:rollover-enabled', false)
-  const rolloverNegativeEnabled = useStorage<boolean>('budget:rollover-negative-enabled', false)
 
   const getMonth = (monthId: string): BudgetMonth | undefined => {
     validateMonthId(monthId)
@@ -47,11 +44,6 @@ export const useBudgetStore = defineStore('budget', () => {
   const plannedIncomeTotal = (monthId: string) => computed(() => {
     const month = getOrCreateMonth(monthId)
     return month.income.reduce((sum, line) => sum + (line.amount || 0), 0)
-  })
-
-  const plannedSpendingItemsTotal = (monthId: string) => computed(() => {
-    const month = getOrCreateMonth(monthId)
-    return month.items.reduce((sum, item) => sum + (item.plannedAmount || 0), 0)
   })
 
   const plannedSavingsOverride = (monthId: string) => computed(() => {
@@ -91,34 +83,96 @@ export const useBudgetStore = defineStore('budget', () => {
 
   function removeIncomeLine(monthId: string, id: string) {
     const month = getOrCreateMonth(monthId)
+    const index = month.income.findIndex(line => line.id === id)
+
+    // Prevent removing the first income line (Salary) and ignore unknown ids.
+    if (index <= 0) return
+
     month.income = month.income.filter(line => line.id !== id)
+  }
 
-    if (!month.income.length) {
-      month.income.push({ id: crypto.randomUUID(), name: '', amount: 0 })
+  function setWantOverride(monthId: string, wantId: string, patch: WantOverridePatch) {
+    const month = getOrCreateMonth(monthId)
+    month.wantOverrides ||= {}
+
+    const current = month.wantOverrides[wantId] ?? {}
+    const next: WantOverride = { ...current }
+
+    if ('disabled' in patch) {
+      if (patch.disabled) {
+        next.disabled = true
+      } else {
+        delete next.disabled
+      }
+    }
+
+    if ('amountOverride' in patch) {
+      if (patch.amountOverride == null) {
+        delete next.amountOverride
+      } else {
+        next.amountOverride = Math.max(0, toAmount(patch.amountOverride))
+      }
+    }
+
+    if (!next.disabled && next.amountOverride == null) {
+      const { [wantId]: _removed, ...rest } = month.wantOverrides
+      month.wantOverrides = rest
+    } else {
+      month.wantOverrides[wantId] = next
+    }
+
+    if (!Object.keys(month.wantOverrides).length) {
+      month.wantOverrides = undefined
     }
   }
 
-  function addBudgetItem(monthId: string) {
+  function clearWantOverride(monthId: string, wantId: string) {
     const month = getOrCreateMonth(monthId)
-    month.items.push({ id: crypto.randomUUID(), name: '', category: 'Uncategorized', plannedAmount: 0, purchased: false })
+    if (!month.wantOverrides) return
+
+    const { [wantId]: _removed, ...rest } = month.wantOverrides
+    month.wantOverrides = rest
+
+    if (!Object.keys(month.wantOverrides).length) {
+      month.wantOverrides = undefined
+    }
   }
 
-  function updateBudgetItem(monthId: string, id: string, patch: Partial<BudgetItem>) {
+  function setDebtPaymentStatus(monthId: string, debtId: string, paid: boolean) {
     const month = getOrCreateMonth(monthId)
-    const index = month.items.findIndex(item => item.id === id)
-    if (index === -1) return
+    month.debtPayments ||= {}
 
-    // Sanitize plannedAmount to prevent NaN states
-    if ('plannedAmount' in patch) {
-      patch.plannedAmount = toAmount(patch.plannedAmount)
+    const current = month.debtPayments[debtId] ?? {}
+    const next: DebtPaymentStatus = { ...current }
+
+    if (paid) {
+      next.paid = true
+    } else {
+      delete next.paid
     }
 
-    Object.assign(month.items[index]!, patch)
+    if (!next.paid) {
+      const { [debtId]: _removed, ...rest } = month.debtPayments
+      month.debtPayments = rest
+    } else {
+      month.debtPayments[debtId] = next
+    }
+
+    if (!Object.keys(month.debtPayments).length) {
+      month.debtPayments = undefined
+    }
   }
 
-  function removeBudgetItem(monthId: string, id: string) {
+  function clearDebtPaymentStatus(monthId: string, debtId: string) {
     const month = getOrCreateMonth(monthId)
-    month.items = month.items.filter(item => item.id !== id)
+    if (!month.debtPayments) return
+
+    const { [debtId]: _removed, ...rest } = month.debtPayments
+    month.debtPayments = rest
+
+    if (!Object.keys(month.debtPayments).length) {
+      month.debtPayments = undefined
+    }
   }
 
   function clearMonth(monthId: string) {
@@ -129,24 +183,22 @@ export const useBudgetStore = defineStore('budget', () => {
 
   return {
     months,
-    rolloverEnabled,
-    rolloverNegativeEnabled,
     // Accessors
     getMonth,
     getOrCreateMonth,
     ensureMonth,
     // Computed helpers
     plannedIncomeTotal,
-    plannedSpendingItemsTotal,
     plannedSavingsOverride,
     // Mutations
     setPlannedSavingsOverride,
+    setWantOverride,
+    clearWantOverride,
+    setDebtPaymentStatus,
+    clearDebtPaymentStatus,
     addIncomeLine,
     updateIncomeLine,
     removeIncomeLine,
-    addBudgetItem,
-    updateBudgetItem,
-    removeBudgetItem,
     clearMonth
   }
 })

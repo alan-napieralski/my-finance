@@ -1,5 +1,14 @@
 import type { AvatarProps } from '@nuxt/ui'
 
+// Domain-organized exports (industry standard).
+export * from './analytics'
+export * from './budget'
+export * from './finance'
+export * from './plans'
+
+// Shared utility/result types.
+export type FetchResult<T> = { data: T, error: null } | { data: null, error: unknown }
+
 export type UserStatus = 'subscribed' | 'unsubscribed' | 'bounced'
 export type SaleStatus = 'paid' | 'failed' | 'refunded'
 
@@ -28,86 +37,10 @@ export interface Member {
   avatar: AvatarProps
 }
 
-export interface Stat {
-  title: string
-  icon: string
-  value: number | string
-  variation: number
-  formatter?: (value: number) => string
-}
-
 export interface Sale {
   id: string
   date: string
   status: SaleStatus
   email: string
   amount: number
-}
-
-export interface Notification {
-  id: number
-  unread?: boolean
-  sender: User
-  body: string
-  date: string
-}
-
-export type Period = 'daily' | 'weekly' | 'monthly'
-
-export interface Range {
-  start: Date
-  end: Date
-}
-
-export interface GeneralSavings {
-  monthlyAmount: number
-}
-
-export interface WantPlan {
-  id: string
-  name: string
-  monthlyAmount: number
-  targetAmount?: number
-  targetDate?: string
-  notes?: string
-}
-
-export interface DebtPlan {
-  id: string
-  name: string
-  totalDebt: number
-  deadline: string
-  monthlyPayment: number
-  interestRate?: number
-  notes?: string
-}
-
-export interface RecurringPayment {
-  id: string
-  name: string
-  monthlyAmount: number
-  category?: string
-  notes?: string
-}
-
-export interface IncomeLine {
-  id: string
-  name: string
-  amount: number
-}
-
-export interface BudgetItem {
-  id: string
-  name: string
-  category: string
-  plannedAmount: number
-  purchased?: boolean
-  notes?: string
-}
-
-export interface BudgetMonth {
-  monthId: string // YYYY-MM
-  income: IncomeLine[]
-  plannedSavingsOverride?: number
-  items: BudgetItem[]
 }

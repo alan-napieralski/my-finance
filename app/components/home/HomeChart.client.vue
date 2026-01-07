@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, format, startOfMonth, startOfWeek } from 'date-fns'
 import { VisXYContainer, VisLine, VisAxis, VisArea, VisCrosshair, VisTooltip } from '@unovis/vue'
-import type { Period, Range } from '~/types'
-import { parseTransactionDate } from '~/utils/dateParser'
+import type { Period, Range, TransactionRow, TransactionsResponse } from '~/types'
+import { useTransactionsApi } from '~/composables/finance/useTransactionsApi'
 
 const cardRef = useTemplateRef<HTMLElement | null>('cardRef')
 
@@ -16,61 +16,47 @@ type DataRecord = {
   amount: number
 }
 
-type FinanceEntry = {
-  id: string
-  timestamp: string
-  data: Record<string, unknown>
-}
+const { fetchTransactions } = useTransactionsApi()
 
 const { width } = useElementSize(cardRef)
 
 const data = ref<DataRecord[]>([])
-const latestEntry = ref<FinanceEntry | null>(null)
+const transactions = ref<TransactionRow[]>([])
 
-const { fetchLatest } = useFinanceData()
-
-const POLL_INTERVAL_MS = 10000
+const POLL_INTERVAL_MS = 30000
 let pollId: number | null = null
 
-const extractTransactions = (entry: FinanceEntry | null): { date: Date, amount: number }[] => {
-  if (!entry || !entry.data) {
-    return []
+const loadTransactions = async () => {
+  try {
+    const response: TransactionsResponse = await fetchTransactions(props.range)
+
+    transactions.value = response.data
+  } catch (error) {
+    console.error('[HomeChart] failed to fetch /api/transactions', error)
+    transactions.value = []
   }
-
-  const payload = entry.data
-
-  // Debug: inspect raw payload from n8n
-
-  const source = Array.isArray(payload.transactions)
-    ? payload.transactions
-    : Array.isArray(payload)
-      ? payload
-      : []
-
-  return source
-    .map((item: unknown) => {
-      const record = item as Record<string, unknown>
-      const date = parseTransactionDate(record.date as string)
-      const amount = typeof record.amount === 'string' ? Number.parseFloat(record.amount) : Number(record.amount)
-
-      if (!date || Number.isNaN(amount)) {
-        return null
-      }
-
-      return { date, amount }
-    })
-    .filter((item): item is { date: Date, amount: number } => item !== null)
 }
 
 const buildChartData = () => {
-  if (!latestEntry.value) {
-    data.value = []
-    return
-  }
+  let invalidDates = 0
 
-  const transactions = extractTransactions(latestEntry.value).filter(({ date }) => {
-    return date >= props.range.start && date <= props.range.end
+  const parsed = transactions.value.flatMap((tx) => {
+    const date = new Date(tx.date)
+
+    if (Number.isNaN(date.getTime())) {
+      invalidDates++
+      return []
+    }
+
+    return [{
+      date,
+      amount: tx.amount
+    }]
   })
+
+  if (invalidDates > 0) {
+    console.warn(`[HomeChart] Skipped ${invalidDates} transaction(s) with invalid date values.`)
+  }
 
   const bucketKey = (date: Date): string => {
     if (props.period === 'daily') {
@@ -86,7 +72,7 @@ const buildChartData = () => {
 
   const buckets = new Map<string, number>()
 
-  for (const tx of transactions) {
+  for (const tx of parsed) {
     const key = bucketKey(tx.date)
     const previous = buckets.get(key) ?? 0
     const spent = tx.amount < 0 ? Math.abs(tx.amount) : 0
@@ -107,21 +93,12 @@ const buildChartData = () => {
   }))
 }
 
-const loadLatest = async () => {
-  const { data: latest, error } = await fetchLatest()
+onMounted(() => {
+  // Initial load + polling to pick up newly ingested transactions without a manual reload.
+  loadTransactions()
 
-  if (!error && latest) {
-    latestEntry.value = latest as FinanceEntry
-  }
-}
-
-onMounted(async () => {
-  await loadLatest()
-
-  // Poll so that when n8n posts new data to /api/finance/webhook,
-  // the chart picks up the latest entry without a manual reload.
   pollId = window.setInterval(() => {
-    loadLatest()
+    loadTransactions()
   }, POLL_INTERVAL_MS)
 })
 
@@ -132,7 +109,11 @@ onUnmounted(() => {
   }
 })
 
-watch([() => props.period, () => props.range, latestEntry], () => {
+watch([() => props.range.start, () => props.range.end], async () => {
+  await loadTransactions()
+})
+
+watch([() => props.period, transactions], () => {
   buildChartData()
 }, { immediate: true })
 

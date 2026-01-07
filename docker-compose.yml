@@ -1,0 +1,22 @@
+# Local development only. Do not use these credentials/settings in production.
+services:
+  postgres:
+    image: postgres:16
+    container_name: my-finance-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-my_finance}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    volumes:
+      - my_finance_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-my_finance}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  my_finance_pgdata:
