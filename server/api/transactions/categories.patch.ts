@@ -1,14 +1,6 @@
 import { z } from 'zod'
+import type { UpdateBatchResult, UpdatedCategory } from '~/types'
 import { withPgClient } from '../../utils/db'
-
-type UpdatedCategory = {
-  id: string
-  category: string | null
-}
-
-type UpdateBatchResult = {
-  updated: UpdatedCategory[]
-}
 
 const chunk = <T>(items: T[], size: number): T[][] => {
   const out: T[][] = []
@@ -25,6 +17,21 @@ const updateSchema = z.object({
 
 const requestSchema = z.object({
   updates: z.array(updateSchema).min(1).max(2000)
+}).superRefine((value, ctx) => {
+  const seen = new Set<string>()
+
+  value.updates.forEach((update, index) => {
+    if (seen.has(update.id)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Duplicate transaction id in updates array',
+        path: ['updates', index, 'id']
+      })
+      return
+    }
+
+    seen.add(update.id)
+  })
 })
 
 const buildBulkUpdateQuery = (updates: Array<{ id: string, category: string | null }>) => {

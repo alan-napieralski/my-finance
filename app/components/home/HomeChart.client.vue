@@ -38,10 +38,25 @@ const loadTransactions = async () => {
 }
 
 const buildChartData = () => {
-  const parsed = transactions.value.map(tx => ({
-    date: new Date(tx.date),
-    amount: tx.amount
-  }))
+  let invalidDates = 0
+
+  const parsed = transactions.value.flatMap((tx) => {
+    const date = new Date(tx.date)
+
+    if (Number.isNaN(date.getTime())) {
+      invalidDates++
+      return []
+    }
+
+    return [{
+      date,
+      amount: tx.amount
+    }]
+  })
+
+  if (invalidDates > 0) {
+    console.warn(`[HomeChart] Skipped ${invalidDates} transaction(s) with invalid date values.`)
+  }
 
   const bucketKey = (date: Date): string => {
     if (props.period === 'daily') {

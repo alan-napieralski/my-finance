@@ -1,4 +1,4 @@
-export type DbTransactionRow = {
+export interface DbTransactionRow {
   id: string
   posted_on: string
   description: string

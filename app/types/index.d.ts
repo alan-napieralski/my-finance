@@ -7,6 +7,15 @@ export * from './plans'
 
 export type FetchResult<T> = { data: T, error: null } | { data: null, error: unknown }
 
+export interface UpdatedCategory {
+  id: string
+  category: string | null
+}
+
+export interface UpdateBatchResult {
+  updated: UpdatedCategory[]
+}
+
 export type UserStatus = 'subscribed' | 'unsubscribed' | 'bounced'
 export type SaleStatus = 'paid' | 'failed' | 'refunded'
 

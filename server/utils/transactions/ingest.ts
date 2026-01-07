@@ -36,7 +36,7 @@ type NormalizedInsertRow = {
   description: string
   category: string | null
   fingerprint: string
-  raw: string | null
+  raw: string
 }
 
 const computeFingerprint = (input: {

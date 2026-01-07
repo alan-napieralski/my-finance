@@ -50,6 +50,15 @@ export function getPgPool(): PgPool {
   const ssl = resolveSsl(databaseUrl)
 
   if (process.env.NODE_ENV === 'production' && ssl?.rejectUnauthorized === false) {
+    const allowInsecure = process.env.ALLOW_INSECURE_SSL === 'true'
+
+    if (!allowInsecure) {
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'Insecure database SSL configuration: rejectUnauthorized=false is not allowed in production. Set ALLOW_INSECURE_SSL=true to override (not recommended).'
+      })
+    }
+
     console.warn('[db] SSL is enabled with rejectUnauthorized=false (certificate validation disabled).')
   }
 
