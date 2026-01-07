@@ -1,6 +1,6 @@
 import type { ComputedRef } from 'vue'
 import type { MainCategory, MainCategorySummary, Range, SubcategorySummary, Transaction } from '~/types'
-import { monthIdSchema } from '~/types/budget'
+import { monthIdSchema } from '~/schemas/budget'
 import { getMainCategory, mainCategories } from '~/utils/budgetCategories'
 import { getMonthRange } from '~/utils/dateRanges'
 

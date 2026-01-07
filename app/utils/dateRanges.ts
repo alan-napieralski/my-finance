@@ -1,5 +1,5 @@
 import type { Range } from '~/types'
-import { monthIdSchema } from '~/types/budget'
+import { monthIdSchema } from '~/schemas/budget'
 
 /**
  * Returns the UTC start/end range for a given monthId (YYYY-MM).

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { format } from 'date-fns'
 import { storeToRefs } from 'pinia'
-import { monthIdSchema } from '~/types/budget'
+import { monthIdSchema } from '~/schemas/budget'
 import { useBudgetStore } from '~/stores/budget'
 import { usePlansStore } from '~/stores/plans'
 import { formatCurrency } from '~/utils/currency'

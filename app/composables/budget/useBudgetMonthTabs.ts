@@ -1,6 +1,6 @@
 import { format, subMonths } from 'date-fns'
 import type { TabsItem } from '#ui/types'
-import { monthIdSchema } from '~/types/budget'
+import { monthIdSchema } from '~/schemas/budget'
 
 type UseBudgetMonthTabsOptions = {
   monthsBack?: number
