@@ -18,8 +18,11 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 
-# Copy built output
-COPY --from=build /app/.output ./.output
+# Copy built output (owned by non-root user)
+COPY --from=build --chown=node:node /app/.output ./.output
+
+# Run as non-root for security hardening
+USER node
 
 # Nuxt/Nitro runtime expects these by default; can be overridden in compose
 ENV NITRO_HOST=0.0.0.0
