@@ -28,5 +28,5 @@ export async function apiFetch<T>(request: string, options: ApiFetchOptions = {}
     ...(baseURL ? { baseURL } : {}),
     credentials: 'include',
     ...options
-  })
+  }) as T
 }
