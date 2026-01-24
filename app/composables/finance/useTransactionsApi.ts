@@ -15,7 +15,7 @@ export function useTransactionsApi() {
 
     const limit = options.limit ?? DEFAULT_TRANSACTIONS_LIMIT
 
-    return await $fetch<TransactionsResponse>('/api/transactions', {
+    return await apiFetch<TransactionsResponse>('/api/transactions', {
       query: {
         start: format(range.start, 'yyyy-MM-dd'),
         end: format(range.end, 'yyyy-MM-dd'),

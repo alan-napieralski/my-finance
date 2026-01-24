@@ -1,0 +1,52 @@
+name: my-finance
+services:
+  postgres:
+    image: postgres:16
+    container_name: my-finance-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_SUPERUSER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERPASS:-postgres}
+      POSTGRES_DB: ${POSTGRES_SUPERDB:-postgres}
+
+      # Used by ./postgres/init/* (runs only on first init of the data volume)
+      APP_DB_NAME: ${APP_DB_NAME}
+      APP_DB_USER: ${APP_DB_USER}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD}
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - my_finance_pgdata:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
+      - ../server/db/migrations:/migrations:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_SUPERUSER:-postgres} -d ${POSTGRES_SUPERDB:-postgres}"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    networks:
+      - my-finance
+
+  app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: my-finance-app
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NITRO_HOST: 0.0.0.0
+      NITRO_PORT: 3000
+      NUXT_API_KEY: ${NUXT_API_KEY}
+      NUXT_DATABASE_URL: postgresql://${APP_DB_USER}:${APP_DB_PASSWORD}@postgres:5432/${APP_DB_NAME}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - my-finance
+
+networks:
+  my-finance:
+
+volumes:
+  my_finance_pgdata:

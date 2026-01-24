@@ -16,6 +16,7 @@ const props = withDefaults(defineProps<{
 const toast = useToast()
 
 const { fetchTransactions } = useTransactionsApi()
+const remote = isRemoteApiEnabled()
 
 const isEditingCategories = ref(false)
 const confirmOpen = ref(false)
@@ -63,7 +64,8 @@ const { data: allTransactions } = await useAsyncData<TransactionRow[]>('finance-
   }
 }, {
   watch: [() => props.period, () => props.range],
-  default: () => []
+  default: () => [],
+  server: !remote
 })
 
 const availableCategories = computed(() => {
@@ -204,7 +206,7 @@ const saveCategoryChanges = async () => {
   isSaving.value = true
 
   try {
-    const response = await $fetch<UpdateCategoriesResponse>('/api/transactions/categories', {
+    const response = await apiFetch<UpdateCategoriesResponse>('/api/transactions/categories', {
       method: 'PATCH',
       body: {
         updates: pendingChanges.value.map(change => ({

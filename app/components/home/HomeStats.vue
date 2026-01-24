@@ -9,6 +9,7 @@ const props = defineProps<{
 }>()
 
 const { fetchTransactions } = useTransactionsApi()
+const remote = isRemoteApiEnabled()
 
 const { data: stats } = await useAsyncData<Stat[]>('stats', async () => {
   let response: TransactionsResponse
@@ -60,7 +61,8 @@ const { data: stats } = await useAsyncData<Stat[]>('stats', async () => {
   return metrics
 }, {
   watch: [() => props.period, () => props.range],
-  default: () => []
+  default: () => [],
+  server: !remote
 })
 </script>
 

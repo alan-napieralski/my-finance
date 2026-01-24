@@ -13,6 +13,9 @@ node_modules
 logs
 *.log
 
+# Vite cache (should not be committed)
+.vite
+
 # Misc
 .DS_Store
 .fleet
