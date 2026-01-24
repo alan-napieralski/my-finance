@@ -21,12 +21,12 @@ export function isRemoteApiEnabled(): boolean {
   return Boolean(getApiBaseUrl())
 }
 
-export async function apiFetch<T>(request: string, options: ApiFetchOptions = {}): Promise<T> {
+export async function apiFetch<T>(request: Parameters<typeof $fetch>[0], options: ApiFetchOptions = {}): Promise<T> {
   const baseURL = getApiBaseUrl()
 
-  return await $fetch<T>(request, {
+  return await $fetch(request, {
     ...(baseURL ? { baseURL } : {}),
-    credentials: 'include',
-    ...options
-  })
+    ...options,
+    credentials: 'include'
+  }) as T
 }
