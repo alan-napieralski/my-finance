@@ -16,6 +16,7 @@ const {
 } = useBudgetMonthTabs()
 
 const { fetchTransactions } = useTransactionsApi()
+const remote = isRemoteApiEnabled()
 
 const monthRange = computed(() => getMonthRange(validatedMonthId.value))
 const previousRange = computed(() => getMonthRange(previousMonthId.value))
@@ -30,7 +31,8 @@ const { data: transactionRows, error: fetchError } = await useAsyncData<Transact
   return response.data
 }, {
   watch: [validatedMonthId, previousMonthId],
-  default: () => []
+  default: () => [],
+  server: !remote
 })
 
 watch(fetchError, (error) => {

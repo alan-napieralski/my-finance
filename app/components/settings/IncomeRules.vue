@@ -6,11 +6,13 @@ type IncomeRulesResponse = {
 }
 
 const toast = useToast()
+const remote = isRemoteApiEnabled()
 
 const { data, pending, error, refresh } = await useAsyncData<IncomeRulesResponse>('income-rules', async () => {
-  return await $fetch<IncomeRulesResponse>('/api/settings/income-rules')
+  return await apiFetch<IncomeRulesResponse>('/api/settings/income-rules')
 }, {
-  default: () => ({ descriptions: [] })
+  default: () => ({ descriptions: [] }),
+  server: !remote
 })
 
 const descriptions = ref<string[]>([])
@@ -50,7 +52,7 @@ const save = async () => {
   isSaving.value = true
 
   try {
-    await $fetch('/api/settings/income-rules', {
+    await apiFetch('/api/settings/income-rules', {
       method: 'PUT',
       body: {
         descriptions: descriptions.value

@@ -1,0 +1,12 @@
+node_modules
+.nuxt
+.output
+.vite
+.git
+.DS_Store
+*.log
+infra/n8n/data
+infra/n8n/n8n_data
+infra/n8n/ollama_data
+infra/.env
+.env

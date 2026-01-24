@@ -10,11 +10,13 @@ export function useFinanceLatestEntry(
   options: UseFinanceLatestEntryOptions = {}
 ) {
   const { default: defaultValue, ...rest } = options
+  const remote = isRemoteApiEnabled()
 
   return useAsyncData<FinanceEntry | null>(key, async () => {
-    return await $fetch<FinanceEntry | null>('/api/finance/latest')
+    return await apiFetch<FinanceEntry | null>('/api/finance/latest')
   }, {
     default: defaultValue ?? (() => null),
-    ...rest
+    ...rest,
+    ...(remote ? { server: false } : {})
   })
 }
