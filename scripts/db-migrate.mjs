@@ -22,7 +22,7 @@ const resolveConnectionString = () => {
   const postgresUrl = process.env.POSTGRES_URL?.trim()
   const neonDatabaseUrl = process.env.NEON_DATABASE_URL?.trim()
 
-  return databaseUrl || postgresUrl || nonPooling || neonDatabaseUrl || nuxt || ''
+  return nonPooling || neonDatabaseUrl || postgresUrl || databaseUrl || nuxt || ''
 }
 
 const run = async () => {
