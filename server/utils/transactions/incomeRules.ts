@@ -1,4 +1,4 @@
-import type { PoolClient } from 'pg'
+import type { DbClient } from '../db'
 
 const normalizeWhitespace = (value: string) => value.replace(/\s+/g, ' ').trim()
 
@@ -8,7 +8,7 @@ export const normalizeIncomeRule = (value: string): { description: string, descr
   return { description, descriptionKey }
 }
 
-export async function listIncomeRuleDescriptions(client: PoolClient): Promise<string[]> {
+export async function listIncomeRuleDescriptions(client: DbClient): Promise<string[]> {
   try {
     const result = await client.query('SELECT description FROM income_rules ORDER BY description ASC')
     return (result.rows as Array<{ description: string }>).map(r => String(r.description))
@@ -22,7 +22,7 @@ export async function listIncomeRuleDescriptions(client: PoolClient): Promise<st
   }
 }
 
-export async function fetchIncomeRuleKeys(client: PoolClient): Promise<Set<string>> {
+export async function fetchIncomeRuleKeys(client: DbClient): Promise<Set<string>> {
   try {
     const result = await client.query('SELECT description_key FROM income_rules')
     return new Set((result.rows as Array<{ description_key: string }>).map(r => String(r.description_key)))
@@ -36,7 +36,7 @@ export async function fetchIncomeRuleKeys(client: PoolClient): Promise<Set<strin
   }
 }
 
-export async function recategorizeIncomeTransactions(client: PoolClient, descriptionKeys: string[]) {
+export async function recategorizeIncomeTransactions(client: DbClient, descriptionKeys: string[]) {
   if (descriptionKeys.length === 0) {
     const cleared = await client.query(
       'UPDATE transactions SET category = NULL WHERE category = \'income\''
