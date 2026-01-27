@@ -43,7 +43,17 @@ const run = async () => {
   const client = new Client({ connectionString })
   await client.connect()
 
+  const advisoryLockKey = 942817
+  let lockAcquired = false
+
   try {
+    const lockResult = await client.query('SELECT pg_try_advisory_lock($1) AS locked', [advisoryLockKey])
+    lockAcquired = Boolean(lockResult.rows?.[0]?.locked)
+
+    if (!lockAcquired) {
+      throw new Error('Database migrations are locked by another process. Try again later.')
+    }
+
     await client.query(`
 CREATE TABLE IF NOT EXISTS schema_migrations (
   id text PRIMARY KEY,
@@ -77,6 +87,9 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 
     process.stdout.write('[migrate] done\n')
   } finally {
+    if (lockAcquired) {
+      await client.query('SELECT pg_advisory_unlock($1)', [advisoryLockKey])
+    }
     await client.end()
   }
 }
