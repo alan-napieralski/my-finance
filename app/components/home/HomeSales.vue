@@ -52,6 +52,8 @@ const searchQuery = ref('')
 const selectedCategories = ref<string[]>([])
 const sortField = ref<SortField>('date')
 const sortDirection = ref<SortDirection>('desc')
+const page = ref(1)
+const pageSize = 25
 
 const { data: allTransactions } = await useAsyncData<TransactionRow[]>('finance-transactions', async () => {
   try {
@@ -180,6 +182,25 @@ const filteredAndSortedData = computed(() => {
   return result
 })
 
+const totalPages = computed(() => {
+  return Math.max(1, Math.ceil(filteredAndSortedData.value.length / pageSize))
+})
+
+const paginatedData = computed(() => {
+  const start = (page.value - 1) * pageSize
+  return filteredAndSortedData.value.slice(start, start + pageSize)
+})
+
+const pageRange = computed(() => {
+  if (filteredAndSortedData.value.length === 0) {
+    return { start: 0, end: 0 }
+  }
+
+  const start = (page.value - 1) * pageSize + 1
+  const end = Math.min(page.value * pageSize, filteredAndSortedData.value.length)
+  return { start, end }
+})
+
 const totalFilteredAmount = computed(() => {
   return filteredAndSortedData.value.reduce((sum, tx) => sum + tx.amount, 0)
 })
@@ -264,6 +285,19 @@ watch([() => props.period, () => props.range], () => {
   if (isEditingCategories.value) {
     exitEditMode()
   }
+})
+
+watch([filteredAndSortedData, () => props.period, () => props.range], () => {
+  if (page.value > totalPages.value) {
+    page.value = totalPages.value
+  }
+  if (page.value < 1) {
+    page.value = 1
+  }
+})
+
+watch([searchQuery, selectedCategories, sortField, sortDirection], () => {
+  page.value = 1
 })
 
 const USelectMenu = resolveComponent('USelectMenu')
@@ -437,7 +471,7 @@ const columns: TableColumn<TransactionRow>[] = [
       <div class="inline-block min-w-full align-middle">
         <div class="overflow-hidden">
           <UTable
-            :data="filteredAndSortedData"
+            :data="paginatedData"
             :columns="columns"
             class="shrink-0"
             :ui="{
@@ -449,6 +483,33 @@ const columns: TableColumn<TransactionRow>[] = [
             }"
           />
         </div>
+      </div>
+    </div>
+
+    <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm text-muted">
+      <div>
+        Showing {{ pageRange.start }}–{{ pageRange.end }} of {{ filteredAndSortedData.length }}
+      </div>
+      <div class="flex items-center gap-2">
+        <UButton
+          color="neutral"
+          variant="ghost"
+          :disabled="page === 1"
+          @click="page = Math.max(1, page - 1)"
+        >
+          Previous
+        </UButton>
+        <div class="min-w-20 text-center text-xs uppercase tracking-wide">
+          Page {{ page }} / {{ totalPages }}
+        </div>
+        <UButton
+          color="neutral"
+          variant="ghost"
+          :disabled="page === totalPages"
+          @click="page = Math.min(totalPages, page + 1)"
+        >
+          Next
+        </UButton>
       </div>
     </div>
     <UModal
