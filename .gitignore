@@ -34,3 +34,5 @@ AGENTS.md
 .cursor/
 # VSC
 .history
+.vercel
+.env*.local

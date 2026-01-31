@@ -16,6 +16,9 @@ NUXT_API_KEY=your-secure-random-api-key
 # Postgres connection string (server-side only)
 # Local via docker-compose:
 NUXT_DATABASE_URL=postgresql://postgres:postgres@localhost:5432/my_finance
+# Vercel + Neon integration (provided automatically in Vercel env):
+# POSTGRES_URL=postgresql://...
+# POSTGRES_URL_NON_POOLING=postgresql://...
 ```
 
 Generate a secure API key:
@@ -26,7 +29,14 @@ openssl rand -hex 32
 
 ### 2. Set up the database schema
 
-Apply the migration in `server/db/migrations/001_init.sql` to your Postgres database (the app expects `transactions` and `ingest_runs`).
+Apply the migrations under `server/db/migrations/` to your Postgres database.
+
+- Local Docker Postgres: you can run the compose migration helper (`infra/scripts/app-migrate.sh`).
+- Vercel + Neon: ensure `POSTGRES_URL_NON_POOLING` is set in your environment and run:
+
+```bash
+pnpm db:migrate
+```
 
 ### 3. Start Your Nuxt App
 

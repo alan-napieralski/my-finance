@@ -1,7 +1,7 @@
 import crypto from 'node:crypto'
 import { format } from 'date-fns'
 import { createError } from 'h3'
-import type { PoolClient } from 'pg'
+import type { DbClient } from '../db'
 import type { FinanceTransactionPayload } from '~/types'
 import { parseTransactionDate } from '~/utils/dateParser'
 import { fetchIncomeRuleKeys } from './incomeRules'
@@ -204,7 +204,7 @@ export type IngestResult = {
 }
 
 export async function ingestFinanceTransactions(options: {
-  client: PoolClient
+  client: DbClient
   sourceSystem: string
   sourceAccount?: string
   transactions: FinanceTransactionPayload[]

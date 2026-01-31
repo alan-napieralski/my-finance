@@ -1,88 +1,61 @@
-import type { PoolClient } from 'pg'
-import { Pool as PgPool } from 'pg'
+import path from 'node:path'
+import process from 'node:process'
+import dotenv from 'dotenv'
 import { createError } from 'h3'
+import { Client, neonConfig } from '@neondatabase/serverless'
+import ws from 'ws'
 
-const globalForPg = globalThis as typeof globalThis & { __myFinancePgPool?: PgPool }
+neonConfig.webSocketConstructor = ws
 
-let pool: PgPool | null = globalForPg.__myFinancePgPool ?? null
+dotenv.config({ path: path.resolve(process.cwd(), '.env.local') })
+dotenv.config({ path: path.resolve(process.cwd(), '.env') })
 
-const resolveDatabaseUrl = (): string => {
+export type DbClient = {
+  query: (text: string, values?: unknown[]) => Promise<{ rows: unknown[], rowCount?: number | null }>
+}
+
+const resolveRuntimeDatabaseUrl = (): string => {
   const config = useRuntimeConfig() as { databaseUrl?: string }
-  const fromRuntimeConfig = config.databaseUrl?.trim()
-  const fromEnv = process.env.DATABASE_URL?.trim()
-
-  return fromRuntimeConfig || fromEnv || ''
+  return config.databaseUrl?.trim() ?? ''
 }
 
-const resolveSsl = (databaseUrl: string): { rejectUnauthorized: boolean } | undefined => {
-  const sslModeFromEnv = process.env.PGSSLMODE?.toLowerCase()
-
-  try {
-    const url = new URL(databaseUrl)
-    const sslModeFromUrl = url.searchParams.get('sslmode')?.toLowerCase()
-    const sslmode = sslModeFromUrl || sslModeFromEnv
-
-    if (!sslmode || sslmode === 'disable' || sslmode === 'false' || sslmode === '0') {
-      return undefined
-    }
-
-    return { rejectUnauthorized: false }
-  } catch {
-    // If DATABASE_URL isn't parseable as a URL, don't guess SSL.
-    return sslModeFromEnv ? { rejectUnauthorized: false } : undefined
+const resolveDatabaseConfig = (): {
+  runtimeUrl: string
+  envDatabaseUrl: string
+  postgresUrl: string
+  postgresNonPoolingUrl: string
+  neonDatabaseUrl: string
+} => {
+  return {
+    runtimeUrl: resolveRuntimeDatabaseUrl(),
+    envDatabaseUrl: process.env.DATABASE_URL?.trim() ?? '',
+    postgresUrl: process.env.POSTGRES_URL?.trim() ?? '',
+    postgresNonPoolingUrl: process.env.POSTGRES_URL_NON_POOLING?.trim() ?? '',
+    neonDatabaseUrl: process.env.NEON_DATABASE_URL?.trim() ?? ''
   }
 }
 
-export function getPgPool(): PgPool {
-  if (pool) {
-    return pool
-  }
+const resolveConnectionString = (): string => {
+  const { runtimeUrl, envDatabaseUrl, postgresUrl, postgresNonPoolingUrl, neonDatabaseUrl } = resolveDatabaseConfig()
+  return envDatabaseUrl || postgresUrl || postgresNonPoolingUrl || neonDatabaseUrl || runtimeUrl
+}
 
-  const databaseUrl = resolveDatabaseUrl()
+export async function withPgClient<T>(fn: (client: DbClient) => Promise<T>): Promise<T> {
+  const connectionString = resolveConnectionString()
 
-  if (!databaseUrl) {
+  if (!connectionString) {
     throw createError({
       statusCode: 500,
-      statusMessage: 'Database not configured. Set NUXT_DATABASE_URL (preferred) or DATABASE_URL.'
+      statusMessage: 'Database not configured. Set DATABASE_URL (Neon), POSTGRES_URL (Vercel integration), or NUXT_DATABASE_URL.'
     })
   }
 
-  const ssl = resolveSsl(databaseUrl)
-
-  if (process.env.NODE_ENV === 'production' && ssl?.rejectUnauthorized === false) {
-    const allowInsecure = process.env.ALLOW_INSECURE_SSL === 'true'
-
-    if (!allowInsecure) {
-      throw createError({
-        statusCode: 500,
-        statusMessage: 'Insecure database SSL configuration: rejectUnauthorized=false is not allowed in production. Set ALLOW_INSECURE_SSL=true to override (not recommended).'
-      })
-    }
-
-    console.warn('[db] SSL is enabled with rejectUnauthorized=false (certificate validation disabled).')
-  }
-
-  const rawMax = process.env.PGPOOL_MAX
-  const parsedMax = rawMax == null ? NaN : Number.parseInt(rawMax, 10)
-  const max = Number.isFinite(parsedMax) && parsedMax > 0 ? parsedMax : 10
-
-  pool = new PgPool({
-    connectionString: databaseUrl,
-    ssl,
-    max
-  })
-
-  globalForPg.__myFinancePgPool = pool
-
-  return pool
-}
-
-export async function withPgClient<T>(fn: (client: PoolClient) => Promise<T>): Promise<T> {
-  const client = await getPgPool().connect()
+  const client = new Client({ connectionString })
+  await client.connect()
 
   try {
-    return await fn(client)
+    return await fn(client as unknown as DbClient)
   } finally {
-    client.release()
+    await client.end()
   }
 }
