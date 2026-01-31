@@ -180,6 +180,17 @@ const filteredAndSortedData = computed(() => {
   return result
 })
 
+const totalFilteredAmount = computed(() => {
+  return filteredAndSortedData.value.reduce((sum, tx) => sum + tx.amount, 0)
+})
+
+const formattedTotalFilteredAmount = computed(() => {
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'GBP'
+  }).format(totalFilteredAmount.value)
+})
+
 const toggleSort = (field: SortField) => {
   if (sortField.value === field) {
     sortDirection.value = sortDirection.value === 'asc' ? 'desc' : 'asc'
@@ -276,13 +287,10 @@ const columns: TableColumn<TransactionRow>[] = [
     accessorKey: 'date',
     header: () => createSortableHeader('date', 'Date'),
     cell: ({ row }) => {
-      return new Date(row.getValue('date') as string).toLocaleString('en-GB', {
+      return new Date(row.getValue('date') as string).toLocaleDateString('en-GB', {
         day: '2-digit',
         month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hour12: false
+        year: 'numeric'
       })
     }
   },
@@ -356,8 +364,9 @@ const columns: TableColumn<TransactionRow>[] = [
 <template>
   <div class="flex flex-col gap-4">
     <!-- Filters -->
-    <UCard>
-      <div class="flex flex-col sm:flex-row gap-3">
+    <div class="flex flex-col gap-3 sm:flex-row sm:items-stretch">
+      <UCard class="w-full sm:flex-1">
+        <div class="flex flex-col sm:flex-row gap-3">
         <div v-if="enableCategoryEditing" class="flex items-center justify-end sm:order-2 sm:ml-auto">
           <UButton
             v-if="!isEditingCategories"
@@ -408,8 +417,20 @@ const columns: TableColumn<TransactionRow>[] = [
             @click="selectedCategories = []"
           />
         </div>
-      </div>
-    </UCard>
+
+        </div>
+      </UCard>
+
+      <UCard
+        class="w-full sm:w-auto sm:min-w-44"
+        :ui="{ body: 'p-3 h-full' }"
+      >
+        <div class="flex h-full flex-col justify-center gap-1">
+          <span class="text-xs uppercase tracking-wide text-muted">Total</span>
+          <span class="text-sm font-semibold text-highlighted">{{ formattedTotalFilteredAmount }}</span>
+        </div>
+      </UCard>
+    </div>
 
     <!-- Table -->
     <div class="overflow-x-auto -mx-4 sm:mx-0">
