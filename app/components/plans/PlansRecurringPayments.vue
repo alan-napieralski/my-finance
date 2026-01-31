@@ -94,23 +94,17 @@ const normalizeCategory = (value: string | undefined): string => {
               />
             </UFormField>
 
-            <UFormField
-              :name="`recurring-category-${payment.id}`"
-              label="Category"
-              class="w-full sm:w-48"
-            >
+            <UFormField :name="`recurring-category-${payment.id}`" label="Category" class="w-full sm:w-52 sm:flex-none">
               <USelect
                 :model-value="normalizeCategory(payment.category)"
                 :items="categoryItems"
+                class="w-full"
+                :ui="{ content: 'min-w-[10rem]', itemLabel: 'whitespace-normal' }"
                 @update:model-value="value => plansStore.updateRecurringPayment(payment.id, { category: String(value) })"
               />
             </UFormField>
 
-            <UFormField
-              :name="`recurring-monthly-${payment.id}`"
-              label="Monthly amount"
-              class="w-full sm:w-40"
-            >
+            <UFormField :name="`recurring-monthly-${payment.id}`" label="Monthly amount" class="w-full sm:w-40">
               <UInput
                 :model-value="payment.monthlyAmount"
                 type="number"
@@ -129,10 +123,7 @@ const normalizeCategory = (value: string | undefined): string => {
             />
           </div>
 
-          <UFormField
-            :name="`recurring-notes-${payment.id}`"
-            label="Notes"
-          >
+          <UFormField :name="`recurring-notes-${payment.id}`" label="Notes">
             <UTextarea
               :model-value="payment.notes"
               :rows="2"
