@@ -45,6 +45,7 @@ const allTransactions = computed(() => toBudgetTransactionsFromRows(transactionR
 
 const {
   actualIncome,
+  actualInflow,
   actualSpent,
   actualNet,
   subcategoryBreakdown,
@@ -55,19 +56,32 @@ const {
   previousMonthId
 })
 
+const resolveValueClass = (value: number): string => {
+  if (value > 0) return 'text-success'
+  if (value < 0) return 'text-error'
+  return 'text-muted'
+}
+
 const budgetStats = computed<BudgetStatCard[]>(() => [{
   key: 'income',
-  label: 'Income',
-  value: formatCurrency(actualIncome.value)
+  label: 'Income (tagged)',
+  value: formatCurrency(actualIncome.value),
+  valueClass: resolveValueClass(actualIncome.value)
+}, {
+  key: 'inflow',
+  label: 'All inflows',
+  value: formatCurrency(actualInflow.value),
+  valueClass: resolveValueClass(actualInflow.value)
 }, {
   key: 'spent',
   label: 'Spent',
-  value: formatCurrency(actualSpent.value)
+  value: formatCurrency(actualSpent.value),
+  valueClass: 'text-muted'
 }, {
   key: 'net',
   label: 'Net',
   value: formatCurrency(actualNet.value),
-  valueClass: actualNet.value >= 0 ? 'text-success' : 'text-error'
+  valueClass: resolveValueClass(actualNet.value)
 }])
 </script>
 

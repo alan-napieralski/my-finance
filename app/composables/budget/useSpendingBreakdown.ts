@@ -32,11 +32,15 @@ export function useSpendingBreakdown({ transactions, monthId, previousMonthId }:
     }, 0)
   })
 
+  const actualInflow = computed(() => {
+    return monthTransactions.value.reduce((sum, tx) => sum + (tx.amount > 0 ? tx.amount : 0), 0)
+  })
+
   const actualSpent = computed(() => {
     return monthTransactions.value.reduce((sum, tx) => sum + (tx.amount < 0 ? Math.abs(tx.amount) : 0), 0)
   })
 
-  const actualNet = computed(() => actualIncome.value - actualSpent.value)
+  const actualNet = computed(() => actualInflow.value - actualSpent.value)
 
   const buildActualByCategoryForRange = (range: Range) => {
     const buckets = new Map<string, number>()
@@ -141,6 +145,7 @@ export function useSpendingBreakdown({ transactions, monthId, previousMonthId }:
     previousMonthRange,
     monthTransactions,
     actualIncome,
+    actualInflow,
     actualSpent,
     actualNet,
     subcategoryBreakdown,
