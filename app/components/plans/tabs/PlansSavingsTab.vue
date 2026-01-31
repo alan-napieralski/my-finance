@@ -4,8 +4,8 @@ import { usePlansStore } from '~/stores/plans'
 import { formatCurrency } from '~/utils/currency'
 
 const plansStore = usePlansStore()
-const { savings, totalSavingsPerMonth } = storeToRefs(plansStore)
-const { setGeneralSavings } = plansStore
+const { savings, totalSavingsPerMonth, isSaving } = storeToRefs(plansStore)
+const { setGeneralSavings, savePlans } = plansStore
 </script>
 
 <template>
@@ -28,6 +28,16 @@ const { setGeneralSavings } = plansStore
               {{ formatCurrency(totalSavingsPerMonth) }}
             </p>
           </div>
+
+          <UButton
+            color="primary"
+            variant="solid"
+            icon="i-lucide-save"
+            :loading="isSaving"
+            @click="savePlans"
+          >
+            Save
+          </UButton>
         </div>
 
         <UFormField

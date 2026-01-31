@@ -45,3 +45,10 @@ export interface RecurringPayment {
   category?: string
   notes?: string
 }
+
+export interface PlansPayload {
+  savings: GeneralSavings
+  wants: WantPlan[]
+  debts: DebtPlan[]
+  recurringPayments: RecurringPayment[]
+}

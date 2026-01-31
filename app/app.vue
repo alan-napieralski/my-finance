@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { usePlansStore } from '~/stores/plans'
+
 const colorMode = useColorMode()
 
 const color = computed(() => colorMode.value === 'dark' ? '#1b1718' : 'white')
@@ -28,6 +30,12 @@ useSeoMeta({
   ogImage: 'https://ui.nuxt.com/assets/templates/nuxt/dashboard-light.png',
   twitterImage: 'https://ui.nuxt.com/assets/templates/nuxt/dashboard-light.png',
   twitterCard: 'summary_large_image'
+})
+
+const plansStore = usePlansStore()
+
+onMounted(() => {
+  void plansStore.loadPlans()
 })
 </script>
 

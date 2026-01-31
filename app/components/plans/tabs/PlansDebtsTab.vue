@@ -9,8 +9,8 @@ import { formatCurrency } from '~/utils/currency'
 const plansStore = usePlansStore()
 const budgetStore = useBudgetStore()
 
-const { debts } = storeToRefs(plansStore)
-const { addDebt, removeDebt, getDebtMonthlyPayment } = plansStore
+const { debts, isSaving } = storeToRefs(plansStore)
+const { addDebt, removeDebt, getDebtMonthlyPayment, savePlans } = plansStore
 
 const monthIdSchema = z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)
 
@@ -113,6 +113,16 @@ const resetDebtPaidThisMonth = (debtId: string) => {
             size="sm"
             class="w-fit"
             @click="addDebt"
+          />
+
+          <UButton
+            color="primary"
+            icon="i-lucide-save"
+            label="Save"
+            size="sm"
+            :loading="isSaving"
+            class="w-fit"
+            @click="savePlans"
           />
         </div>
       </template>

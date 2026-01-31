@@ -6,8 +6,8 @@ import { formatCurrency } from '~/utils/currency'
 
 const plansStore = usePlansStore()
 
-const { wants, totalWantsPerMonth } = storeToRefs(plansStore)
-const { addWant, removeWant } = plansStore
+const { wants, totalWantsPerMonth, isSaving } = storeToRefs(plansStore)
+const { addWant, removeWant, savePlans } = plansStore
 
 const getWantCalculatedMonthlyAmount = (want: WantPlan): number => {
   const targetAmount = Number(want.targetAmount ?? 0)
@@ -57,6 +57,16 @@ const getWantCalculatedMonthlyAmount = (want: WantPlan): number => {
             size="sm"
             class="w-fit"
             @click="addWant"
+          />
+
+          <UButton
+            color="primary"
+            icon="i-lucide-save"
+            label="Save"
+            size="sm"
+            :loading="isSaving"
+            class="w-fit"
+            @click="savePlans"
           />
         </div>
       </template>

@@ -1,7 +1,14 @@
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
-import { useStorage } from '@vueuse/core'
-import type { GeneralSavings, WantPlan, DebtPlan, RecurringPayment } from '~/types'
+import type { DebtPlan, GeneralSavings, PlansPayload, RecurringPayment, WantPlan } from '~/types'
+import { apiFetch } from '~/composables/useApiFetch'
+
+const LEGACY_STORAGE_KEYS = {
+  savings: 'plans:savings-general',
+  wants: 'plans:wants',
+  debts: 'plans:debts',
+  recurring: 'plans:recurring'
+}
 
 const toDateOrNull = (value: string): Date | null => {
   const match = /^\d{4}-\d{2}-\d{2}$/.exec(value)
@@ -50,32 +57,195 @@ const deriveMonthsToTargetFromDate = (targetDate: string): number | null => {
   return Math.max(1, targetIndex - nowIndex)
 }
 
+const normalizeWant = (want: WantPlan): WantPlan => {
+  const monthlyAmount = toNonNegativeNumber(want.monthlyAmount)
+
+  // Only derive months from legacy targetDate when the want is otherwise "calculation-based"
+  // (i.e., no manual monthly amount set).
+  const derivedMonths = want.targetDate && monthlyAmount === 0
+    ? deriveMonthsToTargetFromDate(want.targetDate)
+    : null
+
+  return {
+    ...want,
+    monthlyAmount,
+    targetAmount: want.targetAmount == null ? undefined : toNonNegativeNumber(want.targetAmount),
+    monthsToTarget: want.monthsToTarget == null ? (derivedMonths ?? undefined) : (toPositiveIntegerOrNull(want.monthsToTarget) ?? undefined)
+  }
+}
+
+const normalizeDebt = (debt: DebtPlan): DebtPlan => {
+  return {
+    ...debt,
+    totalDebt: toNonNegativeNumber(debt.totalDebt),
+    monthlyPayment: debt.monthlyPayment == null ? undefined : toNonNegativeNumber(debt.monthlyPayment),
+    interestRate: debt.interestRate == null ? undefined : toNonNegativeNumber(debt.interestRate),
+    deadline: debt.deadline ?? ''
+  }
+}
+
+const normalizeRecurringPayment = (payment: RecurringPayment): RecurringPayment => {
+  return {
+    ...payment,
+    monthlyAmount: toNonNegativeNumber(payment.monthlyAmount),
+    category: payment.category ? payment.category : undefined,
+    notes: payment.notes ? payment.notes : undefined
+  }
+}
+
+const normalizePlans = (payload: PlansPayload): PlansPayload => {
+  return {
+    savings: {
+      monthlyAmount: toNonNegativeNumber(payload.savings?.monthlyAmount ?? 0)
+    },
+    wants: (payload.wants ?? []).map(normalizeWant),
+    debts: (payload.debts ?? []).map(normalizeDebt),
+    recurringPayments: (payload.recurringPayments ?? []).map(normalizeRecurringPayment)
+  }
+}
+
+const parseLegacyJson = <T>(value: string | null, fallback: T): T => {
+  if (!value) return fallback
+  try {
+    return JSON.parse(value) as T
+  } catch {
+    return fallback
+  }
+}
+
+const readLegacyPlans = (): PlansPayload | null => {
+  if (!import.meta.client) return null
+
+  const savings = parseLegacyJson<GeneralSavings>(
+    localStorage.getItem(LEGACY_STORAGE_KEYS.savings),
+    { monthlyAmount: 0 }
+  )
+  const wants = parseLegacyJson<WantPlan[]>(localStorage.getItem(LEGACY_STORAGE_KEYS.wants), [])
+  const debts = parseLegacyJson<DebtPlan[]>(localStorage.getItem(LEGACY_STORAGE_KEYS.debts), [])
+  const recurringPayments = parseLegacyJson<RecurringPayment[]>(
+    localStorage.getItem(LEGACY_STORAGE_KEYS.recurring),
+    []
+  )
+
+  return normalizePlans({ savings, wants, debts, recurringPayments })
+}
+
+const clearLegacyPlans = () => {
+  if (!import.meta.client) return
+  localStorage.removeItem(LEGACY_STORAGE_KEYS.savings)
+  localStorage.removeItem(LEGACY_STORAGE_KEYS.wants)
+  localStorage.removeItem(LEGACY_STORAGE_KEYS.debts)
+  localStorage.removeItem(LEGACY_STORAGE_KEYS.recurring)
+}
+
+const hasMeaningfulPlans = (payload: PlansPayload): boolean => {
+  return payload.savings.monthlyAmount > 0
+    || payload.wants.length > 0
+    || payload.debts.length > 0
+    || payload.recurringPayments.length > 0
+}
+
 export const usePlansStore = defineStore('plans', () => {
-  const savings = useStorage<GeneralSavings>('plans:savings-general', {
-    monthlyAmount: 0
-  })
+  const savings = ref<GeneralSavings>({ monthlyAmount: 0 })
+  const wants = ref<WantPlan[]>([])
+  const debts = ref<DebtPlan[]>([])
+  const recurringPayments = ref<RecurringPayment[]>([])
 
-  const wants = useStorage<WantPlan[]>('plans:wants', [])
-  const debts = useStorage<DebtPlan[]>('plans:debts', [])
-  const recurringPayments = useStorage<RecurringPayment[]>('plans:recurring', [])
+  const isLoaded = ref(false)
+  const isSaving = ref(false)
+  const saveError = ref<string | null>(null)
+  const lastSavedAt = ref<Date | null>(null)
+  const isHydrating = ref(false)
 
-  // Normalize stored wants (non-destructive; keeps legacy fields)
-  wants.value = wants.value.map((want) => {
-    const monthlyAmount = toNonNegativeNumber(want.monthlyAmount)
+  const toast = import.meta.client ? useToast() : null
 
-    // Only derive months from legacy targetDate when the want is otherwise "calculation-based"
-    // (i.e., no manual monthly amount set).
-    const derivedMonths = want.targetDate && monthlyAmount === 0
-      ? deriveMonthsToTargetFromDate(want.targetDate)
-      : null
+  const applyPlans = (payload: PlansPayload) => {
+    const normalized = normalizePlans(payload)
+    savings.value = normalized.savings
+    wants.value = normalized.wants
+    debts.value = normalized.debts
+    recurringPayments.value = normalized.recurringPayments
+  }
 
-    return {
-      ...want,
-      monthlyAmount,
-      targetAmount: want.targetAmount == null ? undefined : toNonNegativeNumber(want.targetAmount),
-      monthsToTarget: want.monthsToTarget == null ? (derivedMonths ?? undefined) : (toPositiveIntegerOrNull(want.monthsToTarget) ?? undefined)
+  const serializePlans = (): PlansPayload => {
+    return normalizePlans({
+      savings: savings.value,
+      wants: wants.value,
+      debts: debts.value,
+      recurringPayments: recurringPayments.value
+    })
+  }
+
+  const savePlans = async () => {
+    if (!isLoaded.value) return
+
+    isSaving.value = true
+    saveError.value = null
+
+    try {
+      const payload = serializePlans()
+
+      await apiFetch('/api/plans', {
+        method: 'PUT',
+        body: payload
+      })
+
+      lastSavedAt.value = new Date()
+
+      if (toast) {
+        toast.add({
+          title: 'Plans saved',
+          color: 'success'
+        })
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to save plans'
+      saveError.value = message
+
+      if (toast) {
+        toast.add({
+          title: 'Failed to save plans',
+          description: 'Please try again.',
+          color: 'error'
+        })
+      }
+    } finally {
+      isSaving.value = false
     }
-  })
+  }
+
+  const loadPlans = async () => {
+    if (isLoaded.value) return
+
+    isHydrating.value = true
+
+    try {
+      const payload = await apiFetch<PlansPayload>('/api/plans')
+      const normalized = normalizePlans(payload)
+      const legacy = readLegacyPlans()
+
+      if (legacy && !hasMeaningfulPlans(normalized) && hasMeaningfulPlans(legacy)) {
+        applyPlans(legacy)
+        isLoaded.value = true
+        await savePlans()
+        clearLegacyPlans()
+        return
+      }
+
+      applyPlans(normalized)
+    } catch (error) {
+      if (toast) {
+        toast.add({
+          title: 'Failed to load plans',
+          description: 'Showing local data only. Please try again later.',
+          color: 'error'
+        })
+      }
+    } finally {
+      isHydrating.value = false
+      isLoaded.value = true
+    }
+  }
 
   const totalSavingsPerMonth = computed(() => savings.value.monthlyAmount ?? 0)
 
@@ -192,6 +362,12 @@ export const usePlansStore = defineStore('plans', () => {
     wants,
     debts,
     recurringPayments,
+    isLoaded,
+    isSaving,
+    saveError,
+    lastSavedAt,
+    loadPlans,
+    savePlans,
     totalSavingsPerMonth,
     totalWantsPerMonth,
     totalDebtPaymentsPerMonth,

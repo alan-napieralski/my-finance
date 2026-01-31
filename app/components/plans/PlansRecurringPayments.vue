@@ -6,8 +6,8 @@ import { formatCurrency } from '~/utils/currency'
 
 const plansStore = usePlansStore()
 
-const { recurringPayments, totalRecurringPaymentsPerMonth } = storeToRefs(plansStore)
-const { addRecurringPayment, removeRecurringPayment } = plansStore
+const { recurringPayments, totalRecurringPaymentsPerMonth, isSaving } = storeToRefs(plansStore)
+const { addRecurringPayment, removeRecurringPayment, savePlans } = plansStore
 
 const categoryKeys = Object.keys(subcategoryToMainCategory)
 
@@ -71,6 +71,16 @@ const normalizeCategory = (value: string | undefined): string => {
             size="sm"
             class="w-fit"
             @click="addRecurringPayment"
+          />
+
+          <UButton
+            color="primary"
+            icon="i-lucide-save"
+            label="Save"
+            size="sm"
+            :loading="isSaving"
+            class="w-fit"
+            @click="savePlans"
           />
         </div>
       </template>

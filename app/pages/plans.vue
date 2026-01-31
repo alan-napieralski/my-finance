@@ -3,6 +3,7 @@ import type { TabsItem } from '@nuxt/ui'
 import PlansDebtsTab from '~/components/plans/tabs/PlansDebtsTab.vue'
 import PlansSavingsTab from '~/components/plans/tabs/PlansSavingsTab.vue'
 import PlansWantsTab from '~/components/plans/tabs/PlansWantsTab.vue'
+import { usePlansStore } from '~/stores/plans'
 
 const items: TabsItem[] = [{
   label: 'Savings',
@@ -19,6 +20,12 @@ const items: TabsItem[] = [{
 }]
 
 const current = ref<'savings' | 'wants' | 'debts' | 'recurring'>('savings')
+
+const plansStore = usePlansStore()
+
+onMounted(() => {
+  void plansStore.loadPlans()
+})
 </script>
 
 <template>
